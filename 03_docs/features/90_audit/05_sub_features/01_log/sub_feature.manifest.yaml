@@ -1,0 +1,8 @@
+name: "log"
+description: "Read-only audit event log with multi-field filtering, cursor pagination, CSV/JSON/NDJSON export, and snapshot diffing"
+module: "90_audit"
+sub_feature: "01_log"
+status: complete
+owner: "sri"
+created_at: "2026-04-02"
+completed_at: "2026-04-03"

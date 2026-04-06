@@ -1,0 +1,87 @@
+openapi: "3.0.3"
+info:
+  title: tennetctl Workspace API
+  version: "1.0.0"
+  description: Org-scoped workspace CRUD with EAV attributes.
+
+paths:
+  /v1/orgs/{org_id}/workspaces:
+    post:
+      summary: Create workspace
+      tags: [workspaces]
+      parameters:
+        - name: org_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, display_name]
+              properties:
+                slug: { type: string, minLength: 3, maxLength: 40 }
+                display_name: { type: string, minLength: 1, maxLength: 255 }
+      responses:
+        "201":
+          description: Workspace created
+
+    get:
+      summary: List workspaces in org
+      tags: [workspaces]
+      parameters:
+        - name: org_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: include_deleted
+          in: query
+          schema: { type: boolean, default: false }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100 }
+      responses:
+        "200":
+          description: Workspace list
+
+  /v1/orgs/{org_id}/workspaces/{ws_id}:
+    get:
+      summary: Get workspace
+      tags: [workspaces]
+    patch:
+      summary: Update workspace
+      tags: [workspaces]
+    delete:
+      summary: Soft-delete workspace
+      tags: [workspaces]
+      responses:
+        "204":
+          description: Deleted
+
+  /v1/orgs/{org_id}/workspaces/{ws_id}/versions:
+    get:
+      summary: List snapshot versions
+      tags: [workspaces]
+
+  /v1/orgs/{org_id}/workspaces/{ws_id}/versions/{version}:
+    get:
+      summary: Get snapshot at version N
+      tags: [workspaces]
+
+components:
+  schemas:
+    Workspace:
+      type: object
+      properties:
+        id: { type: string }
+        org_id: { type: string }
+        slug: { type: string, nullable: true }
+        display_name: { type: string, nullable: true }
+        is_active: { type: boolean }
+        is_test: { type: boolean }
+        settings: { type: object }
+        deleted_at: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }

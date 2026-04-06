@@ -1,0 +1,88 @@
+openapi: "3.0.3"
+info:
+  title: tennetctl Audit API
+  version: "1.0.0"
+  description: Read-only audit event log with filtering, pagination, and export.
+
+paths:
+  /v1/audit-events:
+    get:
+      summary: List audit events
+      tags: [audit]
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, maximum: 1000 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: org_id
+          in: query
+          schema: { type: string }
+        - name: entity_type
+          in: query
+          schema: { type: string }
+        - name: entity_id
+          in: query
+          schema: { type: string }
+        - name: action
+          in: query
+          schema: { type: string }
+        - name: outcome
+          in: query
+          schema: { type: string }
+        - name: actor_id
+          in: query
+          schema: { type: string }
+        - name: date_from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: date_to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Paginated audit events with meta
+
+  /v1/audit-events/export:
+    get:
+      summary: Export audit events
+      tags: [audit]
+      parameters:
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, json, ndjson], default: csv }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 5000 }
+      responses:
+        "200":
+          description: Streaming file download
+
+  /v1/audit-events/{event_id}:
+    get:
+      summary: Get single audit event with attributes
+      tags: [audit]
+      responses:
+        "200":
+          description: Full audit event with attrs
+
+components:
+  schemas:
+    AuditEvent:
+      type: object
+      properties:
+        id: { type: string }
+        actor_id: { type: string, nullable: true }
+        actor_type: { type: string }
+        org_id: { type: string, nullable: true }
+        action: { type: string }
+        action_label: { type: string }
+        entity_type: { type: string }
+        entity_id: { type: string }
+        outcome: { type: string }
+        outcome_label: { type: string }
+        ip_address: { type: string, nullable: true }
+        metadata: { type: object }
+        created_at: { type: string }
+        source_schema: { type: string }

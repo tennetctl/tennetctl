@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (lint + test)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tennetctl
+          POSTGRES_PASSWORD: tennetctl
+          POSTGRES_DB: tennetctl
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      nats:
+        image: nats:2.10-alpine
+        ports:
+          - 4222:4222
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type check
+        run: uv run pyright .
+        continue-on-error: true
+
+      - name: Run migrations
+        env:
+          APP_DATABASE_URL: postgresql://tennetctl:tennetctl@localhost:5432/tennetctl
+          NATS_URL: nats://localhost:4222
+        run: uv run python -m scripts.migrate up
+
+      - name: Run tests
+        env:
+          APP_DATABASE_URL: postgresql://tennetctl:tennetctl@localhost:5432/tennetctl
+          NATS_URL: nats://localhost:4222
+        run: uv run pytest --cov=. --cov-report=term-missing --cov-fail-under=80

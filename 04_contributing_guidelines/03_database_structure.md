@@ -1,0 +1,395 @@
+# Database Structure Guide
+
+This document explains the exact database structure every contributor must follow. No exceptions.
+
+If you add a table, column, or property to tennetctl, it follows this pattern. This is how we keep the database under control across dozens of features and contributors.
+
+---
+
+## The Core Pattern: fct / dtl (EAV) / dim
+
+tennetctl uses a **fct + dtl + dim** pattern for all data. Understanding this is mandatory before writing any migration.
+
+```
+dim_*  →  Lookup/enumeration tables (SMALLINT PK, seeded in migration)
+fct_*  →  Pure identity tables (UUID PK, FK references only, NO descriptive strings)
+dtl_*  →  Descriptive attributes via EAV (key_text / key_jsonb per attribute)
+adm_*  →  Admin/operator configuration (mutable, same audit columns as fct)
+lnk_*  →  Many-to-many associations (immutable rows, no updated_at)
+evt_*  →  Append-only events (never updated, never deleted)
+```
+
+### Why EAV?
+
+Adding a new property (email, department, display_name) requires **zero schema changes**:
+
+```sql
+-- 1. Register the attribute definition
+INSERT INTO "02_iam".07_dim_attr_defs
+    (id, entity_type_id, code, label, value_type, is_required, is_unique, description)
+VALUES (8, 1, 'department', 'Department', 'text', false, false, 'User department.');
+
+-- 2. Store the value
+INSERT INTO "02_iam".20_dtl_attrs (entity_type_id, entity_id, attr_def_id, key_text, created_by)
+VALUES (1, '<user-uuid>', 8, 'Engineering', '<actor-uuid>');
+```
+
+No `ALTER TABLE`. No migration. No deploy window. This is how we scale across many features without the database becoming unmanageable.
+
+---
+
+## Table Number Ranges
+
+Every table name starts with a two-digit prefix that determines its type:
+
+| Range | Type | Purpose |
+|-------|------|---------|
+| 01–09 | `dim` | Dimension / lookup tables |
+| 10–19 | `fct` | Fact / identity tables |
+| 20–29 | `dtl` | Detail / EAV attribute tables |
+| 30–39 | `adm` | Admin / configuration tables |
+| 40–59 | `lnk` | Link / association tables |
+| 60–79 | `evt` | Event / audit tables |
+| 80–99 | reserved | Future use |
+
+**Example:** `10_fct_users`, `20_dtl_attrs`, `01_dim_user_statuses`, `40_lnk_org_members`
+
+---
+
+## Database Accounts and Access Levels
+
+tennetctl uses **three Postgres roles** to enforce least-privilege at the database level:
+
+### 1. Read Account (`tennetctl_read`)
+
+- **Purpose:** Dashboard queries, reporting, analytics, health checks
+- **Permissions:** `SELECT` on all tables and views
+- **Cannot:** INSERT, UPDATE, DELETE, CREATE, ALTER, DROP
+- **Used by:** Read-only API endpoints (GET), monitoring, BI tools
+
+```sql
+GRANT USAGE ON SCHEMA "02_iam" TO tennetctl_read;
+GRANT SELECT ON ALL TABLES IN SCHEMA "02_iam" TO tennetctl_read;
+```
+
+### 2. Write Account (`tennetctl_write`)
+
+- **Purpose:** Application runtime — all CRUD operations
+- **Permissions:** SELECT, INSERT, UPDATE, DELETE on all tables
+- **Cannot:** CREATE, ALTER, DROP (no DDL)
+- **Used by:** API server (FastAPI backend)
+
+```sql
+GRANT USAGE ON SCHEMA "02_iam" TO tennetctl_write;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "02_iam" TO tennetctl_write;
+```
+
+### 3. Admin Account (`tennetctl_admin`)
+
+- **Purpose:** Migrations, schema changes, bootstrapping
+- **Permissions:** Full DDL + DML
+- **Cannot:** Be used by the application at runtime
+- **Used by:** Migration scripts only (`scripts.migrate`)
+
+```sql
+GRANT ALL PRIVILEGES ON SCHEMA "02_iam" TO tennetctl_admin;
+```
+
+### Why Three Accounts?
+
+- **Defense in depth:** Even if the application has a SQL injection bug, the write account cannot DROP tables or ALTER schemas
+- **Audit clarity:** Connection logs show exactly which account performed which operation
+- **Compliance:** Separation of duties is a requirement for SOC 2 and similar frameworks
+
+---
+
+## Schema Per Module
+
+Each module owns exactly one Postgres schema. Never create tables in `public`.
+
+| Module | Schema |
+|--------|--------|
+| IAM | `"02_iam"` |
+| Audit | `"03_audit"` |
+| Monitoring | `"04_monitoring"` |
+| Notifications | `"05_notify"` |
+| Product Ops | `"06_ops"` |
+| Vault | `"07_vault"` |
+| LLM Ops | `"08_llmops"` |
+
+**A module only queries its own schema.** Cross-module data access uses the event bus or service interfaces in `01_core/`.
+
+---
+
+## Column Templates
+
+### dim_* (Lookup / Enumeration)
+
+```sql
+CREATE TABLE "{schema}".{nn}_dim_{name} (
+    id            SMALLINT    NOT NULL,
+    code          TEXT        NOT NULL,
+    label         TEXT        NOT NULL,
+    description   TEXT        NOT NULL DEFAULT '',
+    deprecated_at TIMESTAMP,           -- NULL=active | SET=retired
+
+    CONSTRAINT pk_{name}      PRIMARY KEY (id),
+    CONSTRAINT uq_{name}_code UNIQUE (code)
+);
+```
+
+- `SMALLINT` PK — never UUID
+- No `updated_at`, no `created_by` — dim rows are seeded facts
+- Never delete dim rows: set `deprecated_at` to retire
+
+### fct_* (Identity / Entity)
+
+```sql
+CREATE TABLE "{schema}".{nn}_fct_{name} (
+    id          VARCHAR(36) NOT NULL,  -- UUID v7 generated by application
+    -- FK columns (SMALLINT for dim refs, VARCHAR(36) for entity refs)
+    is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
+    is_test     BOOLEAN     NOT NULL DEFAULT FALSE,
+    deleted_at  TIMESTAMP,             -- NULL=live | SET=soft-deleted
+    created_by  VARCHAR(36),           -- actor UUID — not FK-enforced
+    updated_by  VARCHAR(36),           -- actor UUID — not FK-enforced
+    created_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_{name} PRIMARY KEY (id)
+);
+```
+
+**Critical rules for fct_* tables:**
+- NO names, emails, strings, or JSONB — those go in `dtl_attrs`
+- Only: UUID PK, SMALLINT FKs to dim tables, BOOLEAN flags, TIMESTAMP audit columns, VARCHAR(36) actor columns
+- Every `UPDATE` must explicitly set `updated_at = CURRENT_TIMESTAMP, updated_by = $actor_id`
+
+### dtl_* (EAV Attributes)
+
+```sql
+CREATE TABLE "{schema}".{nn}_dtl_{name} (
+    entity_type_id  SMALLINT    NOT NULL,
+    entity_id       VARCHAR(36) NOT NULL,
+    attr_def_id     SMALLINT    NOT NULL,
+    key_text        TEXT,                  -- simple string values
+    key_jsonb       TEXT,                  -- structured values (JSON as TEXT for portability)
+    created_by      VARCHAR(36),
+    updated_by      VARCHAR(36),
+    created_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_{name}            PRIMARY KEY (entity_type_id, entity_id, attr_def_id),
+    CONSTRAINT chk_{name}_one_value CHECK (
+        (key_text IS NOT NULL AND key_jsonb IS NULL) OR
+        (key_jsonb IS NOT NULL AND key_text IS NULL)
+    )
+);
+```
+
+- Every key must be declared in `07_dim_attr_defs` first
+- Exactly one of `key_text` or `key_jsonb` is populated (enforced by CHECK)
+
+### adm_* (Admin Configuration)
+
+Same audit columns as `fct_*`. Used for platform/operator configuration that changes at runtime.
+
+### lnk_* (Associations)
+
+```sql
+CREATE TABLE "{schema}".{nn}_lnk_{name} (
+    id          VARCHAR(36) NOT NULL,
+    org_id      VARCHAR(36) NOT NULL,  -- denormalised for tenant filtering
+    -- FK columns
+    created_by  VARCHAR(36),
+    created_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- NO updated_at — lnk rows are immutable; change = delete + re-insert
+
+    CONSTRAINT pk_{name} PRIMARY KEY (id)
+);
+```
+
+### evt_* (Append-Only Events)
+
+```sql
+CREATE TABLE "{schema}".{nn}_evt_{name} (
+    id          VARCHAR(36) NOT NULL,
+    org_id      VARCHAR(36),
+    actor_id    VARCHAR(36),
+    ip_address  VARCHAR(45),
+    metadata    TEXT        NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- NO updated_at, NO deleted_at — events are immutable facts
+
+    CONSTRAINT pk_{name} PRIMARY KEY (id)
+);
+```
+
+---
+
+## Views
+
+Views are the **read layer**. The rule:
+
+```
+GET  → view (v_{entity})
+POST / PATCH / DELETE → tables directly
+```
+
+### What Every View Must Do
+
+1. Resolve dim FK → human-readable code string (never expose raw `status_id`)
+2. Derive `is_deleted = (deleted_at IS NOT NULL)`
+3. `COALESCE(settings, '{}')` — JSON settings never null in the API
+4. Left-join `dtl_attrs` to materialize named attributes flat
+
+### View Naming
+
+```
+v_{plural_entity}     — regular views
+mv_{description}      — materialized views (for expensive aggregations)
+```
+
+### Example View
+
+```sql
+CREATE OR REPLACE VIEW "02_iam".v_orgs AS
+SELECT
+    o.id,
+    o.is_active,
+    o.is_test,
+    o.deleted_at IS NOT NULL AS is_deleted,
+    s.code AS status,
+    -- Materialized EAV attributes
+    MAX(CASE WHEN ad.code = 'name' THEN a.key_text END) AS name,
+    MAX(CASE WHEN ad.code = 'slug' THEN a.key_text END) AS slug,
+    MAX(CASE WHEN ad.code = 'settings' THEN a.key_jsonb END) AS settings,
+    o.created_at,
+    o.updated_at
+FROM "02_iam".11_fct_orgs o
+LEFT JOIN "02_iam".01_dim_org_statuses s ON o.status_id = s.id
+LEFT JOIN "02_iam".20_dtl_attrs a ON a.entity_type_id = 2 AND a.entity_id = o.id
+LEFT JOIN "02_iam".07_dim_attr_defs ad ON a.attr_def_id = ad.id
+GROUP BY o.id, s.code;
+```
+
+---
+
+## Constraint Naming
+
+Never rely on database-generated names. Every constraint is explicitly named:
+
+| Type | Prefix | Example |
+|------|--------|---------|
+| Primary Key | `pk_` | `pk_fct_users` |
+| Foreign Key | `fk_` | `fk_fct_users_status` |
+| Unique | `uq_` | `uq_fct_users_email` |
+| Check | `chk_` | `chk_fct_users_email` |
+| Index | `idx_` | `idx_fct_users_live` |
+| RLS Policy | `rls_` | `rls_fct_orgs_tenant` |
+
+---
+
+## COMMENT on Everything
+
+Every table and every column must have a `COMMENT`. No exceptions.
+
+```sql
+COMMENT ON TABLE "02_iam"."11_fct_orgs" IS
+    'Organisations (tenants). One row per organisation. Identity only — '
+    'descriptive attributes stored in 20_dtl_attrs.';
+
+COMMENT ON COLUMN "02_iam"."11_fct_orgs".created_by IS
+    'UUID of creating user. NULL=system. References fct_users.id — '
+    'FK not enforced to preserve schema isolation.';
+```
+
+Document: what it stores, what NULL means, non-obvious behavior, cross-module references.
+
+---
+
+## Soft Delete
+
+Always `deleted_at TIMESTAMP`, never `is_deleted BOOLEAN`.
+
+```sql
+-- Correct
+WHERE deleted_at IS NULL
+
+-- Wrong
+WHERE is_deleted = false
+WHERE status != 'deleted'
+```
+
+---
+
+## Adding a New Property — The Complete Flow
+
+When you need to add a property to any entity (user, org, workspace, etc.):
+
+### Step 1: Register the attribute definition
+
+```sql
+INSERT INTO "{schema}".07_dim_attr_defs
+    (id, entity_type_id, code, label, value_type, is_required, is_unique, description)
+VALUES
+    (next_id, entity_type_id, 'your_attr_code', 'Human Label', 'text', false, false, 'Description.');
+```
+
+### Step 2: Store values via dtl_attrs
+
+```sql
+INSERT INTO "{schema}".20_dtl_attrs
+    (entity_type_id, entity_id, attr_def_id, key_text, created_by)
+VALUES
+    (entity_type_id, '<entity-uuid>', attr_def_id, 'value', '<actor-uuid>');
+```
+
+### Step 3: Update the view
+
+Add the new attribute to the view's `CASE` expression:
+
+```sql
+MAX(CASE WHEN ad.code = 'your_attr_code' THEN a.key_text END) AS your_attr_code,
+```
+
+### What You Do NOT Do
+
+- Do NOT add a column to the `fct_*` table
+- Do NOT write an `ALTER TABLE` migration
+- Do NOT store strings directly in `fct_*` tables
+
+This discipline is what keeps the database manageable across 8 modules and dozens of sub-features.
+
+---
+
+## Row-Level Security (Postgres)
+
+Every table with `org_id` gets an RLS policy:
+
+```sql
+ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;
+CREATE POLICY rls_{table}_tenant ON {table}
+    USING (org_id = current_setting('app.current_org_id', true)::UUID);
+```
+
+The application also enforces tenant isolation at the query level — RLS is defense-in-depth.
+
+---
+
+## Migration Checklist
+
+Before submitting a migration PR, verify:
+
+- [ ] Table is in the correct module schema (never `public`)
+- [ ] Name follows `{nn}_{type}_{name}`
+- [ ] `fct_*` has all standard audit columns
+- [ ] No triggers, functions, procedures, extensions, or ENUMs
+- [ ] `lnk_*` has no `updated_at` (immutable rows)
+- [ ] `evt_*` has no `updated_at`, no `deleted_at`
+- [ ] All constraints are explicitly named with correct prefixes
+- [ ] Every table and column has a `COMMENT`
+- [ ] DOWN section genuinely reverts UP
+- [ ] No strings in `fct_*` columns (use `dtl_attrs`)
+- [ ] New properties go through `dim_attr_defs` → `dtl_attrs`, not column additions
+- [ ] RLS added for tables with `org_id`

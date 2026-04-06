@@ -1,0 +1,8 @@
+name: "workspace"
+description: "Workspace management — org-scoped workspaces with EAV attributes and snapshot versioning"
+module: "02_iam"
+sub_feature: "03_workspace"
+status: complete
+owner: "sri"
+created_at: "2026-04-02"
+completed_at: "2026-04-03"

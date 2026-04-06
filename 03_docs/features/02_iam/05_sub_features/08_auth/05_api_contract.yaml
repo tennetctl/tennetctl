@@ -1,0 +1,149 @@
+openapi: "3.0.3"
+info:
+  title: tennetctl Auth API
+  version: "1.0.0"
+  description: Email/password authentication with JWT sessions.
+
+paths:
+  /v1/auth/setup-status:
+    get:
+      summary: Check if first-run setup is needed
+      tags: [auth]
+      responses:
+        "200":
+          description: Setup status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      needs_setup: { type: boolean }
+                      user_count: { type: integer }
+
+  /v1/auth/setup:
+    post:
+      summary: Create initial admin (only when zero users exist)
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201":
+          description: Admin created, JWT returned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenEnvelope" }
+        "403":
+          description: Setup already complete
+
+  /v1/auth/register:
+    post:
+      summary: Register new user
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterRequest" }
+      responses:
+        "201":
+          description: User registered, JWT returned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenEnvelope" }
+
+  /v1/auth/login:
+    post:
+      summary: Login with email + password
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: JWT pair
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenEnvelope" }
+        "401":
+          description: Invalid credentials
+
+  /v1/auth/refresh:
+    post:
+      summary: Rotate JWT tokens
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200":
+          description: New JWT pair
+
+  /v1/auth/logout:
+    post:
+      summary: Revoke current session
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session revoked
+
+  /v1/auth/me:
+    get:
+      summary: Get current user profile from JWT
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user profile
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name]
+      properties:
+        email: { type: string, minLength: 3, maxLength: 255 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        display_name: { type: string, minLength: 1, maxLength: 255 }
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        token_type: { type: string, default: bearer }
+        expires_in: { type: integer }
+
+    TokenEnvelope:
+      type: object
+      properties:
+        ok: { type: boolean }
+        data: { $ref: "#/components/schemas/TokenResponse" }

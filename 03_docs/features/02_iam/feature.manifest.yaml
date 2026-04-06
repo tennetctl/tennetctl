@@ -1,0 +1,110 @@
+title: "Identity & Access Management"
+module: "02_iam"
+schema: "02_iam"
+status: IN_PROGRESS
+priority: high
+created_at: "2026-04-02"
+
+sub_features:
+  # ---- DONE ----
+  - number: 01
+    name: org
+    status: DONE
+    description: Organisation (tenant) management with full EAV, audit, and snapshot versioning.
+
+  - number: 02
+    name: user
+    status: DONE
+    description: User account management with EAV attributes, lifecycle states, and snapshot versioning.
+
+  - number: 03
+    name: workspace
+    status: DONE
+    description: Org-scoped workspace management with EAV and snapshot versioning.
+
+  - number: 04
+    name: group
+    status: DONE
+    description: Org-scoped user groups with slug uniqueness and soft-delete.
+
+  - number: 05
+    name: org_member
+    status: DONE
+    description: Link users to orgs with roles (owner, admin, member, viewer).
+
+  - number: 06
+    name: group_member
+    status: DONE
+    description: Link users to groups within an org.
+
+  - number: 07
+    name: workspace_member
+    status: DONE
+    description: Link users to workspaces with roles (admin, member, viewer).
+
+  - number: 08
+    name: auth
+    status: DONE
+    description: Email/password authentication — register, login, JWT sessions, first-run setup.
+
+  - number: 19
+    name: rbac
+    status: DONE
+    description: Role-based access control — roles, permissions, role-permission assignments, group-role links, runtime check endpoint.
+
+  - number: 24
+    name: feature_flag
+    status: DONE
+    description: Feature flags with rule engine, segments, variants, env configs, overrides, targets, prerequisites, eval analytics, EAV extensibility, metered/quota flags, licensing.
+
+  - number: 25
+    name: license_profile
+    status: DONE
+    description: Per-org/workspace license tier assignment with feature flag entitlements and JSONB feature limits.
+
+  - number: 26
+    name: project
+    status: DONE
+    description: Org-scoped projects — what the org is building. Flags, envs, SDK tokens live under projects.
+
+  # ---- PLANNED ----
+  - number: 11
+    name: mfa
+    status: PLANNED
+    description: Multi-factor authentication (TOTP, backup codes, trusted devices).
+
+  - number: 12
+    name: oauth2
+    status: PLANNED
+    description: OAuth2 provider support (Google, GitHub).
+
+migrations:
+  - "001–004: org bootstrap (01_org)"
+  - "005: audit bootstrap (90_audit/01_log)"
+  - "006a: users (02_user)"
+  - "006b: auth (08_auth)"
+  - "006c: workspaces (03_workspace)"
+  - "007: groups (04_group)"
+  - "008: org members (05_org_member)"
+  - "009: group members (06_group_member)"
+  - "010: feature flags (24_feature_flag)"
+  - "011: RBAC (19_rbac)"
+  - "012: workspace members (07_workspace_member)"
+
+frontend_pages:
+  - /iam/orgs
+  - /iam/orgs/[id]
+  - /iam/users
+  - /iam/users/[id]
+  - /iam/workspaces
+  - /iam/workspaces/[id]
+  - /iam/groups
+  - /iam/groups/[id]
+  - /iam/feature-flags
+  - /iam/feature-flags/[id]
+  - /iam/roles
+  - /iam/roles/[id]
+  - /login
+  - /register
+  - /setup
+  - /audit

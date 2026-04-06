@@ -1,0 +1,159 @@
+openapi: "3.0.3"
+info:
+  title: tennetctl User API
+  version: "1.0.0"
+  description: User CRUD with EAV attributes and snapshot versioning.
+
+paths:
+  /v1/users:
+    post:
+      summary: Create user
+      tags: [users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, display_name]
+              properties:
+                email: { type: string, minLength: 3, maxLength: 255 }
+                display_name: { type: string, minLength: 1, maxLength: 255 }
+                account_type_id: { type: integer, default: 1 }
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserEnvelope" }
+
+    get:
+      summary: List users
+      tags: [users]
+      parameters:
+        - name: include_deleted
+          in: query
+          schema: { type: boolean, default: false }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 100, maximum: 500 }
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/User" }
+
+  /v1/users/{user_id}:
+    get:
+      summary: Get user by ID
+      tags: [users]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Single user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserEnvelope" }
+
+    patch:
+      summary: Update user
+      tags: [users]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name: { type: string }
+                status: { type: string, enum: [active, inactive, suspended] }
+                is_active: { type: boolean }
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserEnvelope" }
+
+    delete:
+      summary: Soft-delete user
+      tags: [users]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /v1/users/{user_id}/versions:
+    get:
+      summary: List snapshot versions
+      tags: [users]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Version list
+
+  /v1/users/{user_id}/versions/{version}:
+    get:
+      summary: Get snapshot at version N
+      tags: [users]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: version
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Full entity snapshot JSON
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string, nullable: true }
+        display_name: { type: string, nullable: true }
+        avatar_url: { type: string, nullable: true }
+        status: { type: string }
+        account_type: { type: string }
+        is_active: { type: boolean }
+        is_test: { type: boolean }
+        settings: { type: object }
+        deleted_at: { type: string, nullable: true }
+        created_by: { type: string, nullable: true }
+        updated_by: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    UserEnvelope:
+      type: object
+      properties:
+        ok: { type: boolean }
+        data: { $ref: "#/components/schemas/User" }

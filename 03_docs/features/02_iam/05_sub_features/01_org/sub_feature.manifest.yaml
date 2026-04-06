@@ -1,0 +1,8 @@
+name: "org"
+description: "Organisation management — create, update, soft-delete, and restore orgs with EAV attribute support"
+module: "02_iam"
+sub_feature: "01_org"
+status: complete
+owner: "sri"
+created_at: "2026-04-02"
+completed_at: "2026-04-03"

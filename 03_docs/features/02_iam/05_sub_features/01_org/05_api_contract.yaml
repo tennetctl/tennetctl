@@ -1,0 +1,39 @@
+openapi: 3.0.0
+info:
+  title: Org API
+  version: 1.0.0
+paths:
+  /v1/orgs:
+    get:
+      summary: List all organisations
+      description: Returns a paginated list of org records from the v_orgs view.
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: include_deleted
+          in: query
+          schema: { type: boolean, default: false }
+    post:
+      summary: Create a new organisation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, display_name]
+              properties:
+                slug: { type: string, minLength: 3, maxLength: 40 }
+                display_name: { type: string }
+                settings: { type: object }
+
+  /v1/orgs/{org_id}:
+    get:
+      summary: Get a single organisation
+    patch:
+      summary: Update organisation attributes
+    delete:
+      summary: Soft-delete an organisation

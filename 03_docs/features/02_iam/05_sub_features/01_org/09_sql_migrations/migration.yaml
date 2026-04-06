@@ -1,0 +1,16 @@
+# IAM Feature — Migration Manifest
+#
+# This file defines the ordered execution plan for all SQL migrations
+# in the 02_iam feature. The runner MUST apply migrations in this exact
+# order to satisfy foreign-key dependencies.
+
+feature: "02_iam"
+schema: "02_iam"
+runner: "migrate"          
+
+migration_groups:
+  - sub_feature: "01_org"
+    description: "Root tenant entity — must run first, everything else depends on it"
+    files:
+      - file: "20260402_001_iam_org_bootstrap.sql"
+        status: applied

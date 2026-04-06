@@ -1,0 +1,11 @@
+name: audit
+number: 90
+status: active
+description: Global audit & event system with per-feature tables and unified cross-feature view.
+schema: "90_audit"
+
+sub_features:
+  - number: 01
+    name: log
+    status: active
+    description: Audit event log — write from any feature, query globally.
