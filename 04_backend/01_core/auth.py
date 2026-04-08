@@ -75,4 +75,9 @@ async def require_auth(
     if abs_exp is not None and abs_exp < _utcnow_naive():
         raise AppError("SESSION_EXPIRED", "Session absolute TTL exceeded.", 401)
 
+    # Enrich payload with org/workspace scope claims (may be absent on old tokens)
+    # These are available as token["oid"] and token["wid"] in route handlers.
+    payload.setdefault("oid", None)
+    payload.setdefault("wid", None)
+
     return payload

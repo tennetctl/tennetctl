@@ -69,14 +69,23 @@ def _b64url_decode(s: str) -> bytes:
     return base64.urlsafe_b64decode(s + "=" * (padding % 4))
 
 
-async def issue_token(user_id: str, ttl_seconds: int, *, session_id: str) -> str:
+async def issue_token(
+    user_id: str,
+    ttl_seconds: int,
+    *,
+    session_id: str,
+    org_id: str | None = None,
+    workspace_id: str | None = None,
+) -> str:
     """Sign and return a JWT access token.
 
     Args:
-        user_id:     The subject UUID.
-        ttl_seconds: Token lifetime in seconds.
-        session_id:  The session PK — stored as ``sid`` claim so routes can
-                     call touch_session and similar without a DB lookup.
+        user_id:      The subject UUID.
+        ttl_seconds:  Token lifetime in seconds.
+        session_id:   The session PK — stored as ``sid`` claim so routes can
+                      call touch_session and similar without a DB lookup.
+        org_id:       Active org scope; included as ``oid`` claim if provided.
+        workspace_id: Active workspace scope; included as ``wid`` claim if provided.
 
     Returns:
         A signed compact JWT string.
@@ -84,17 +93,18 @@ async def issue_token(user_id: str, ttl_seconds: int, *, session_id: str) -> str
     secret = await _get_jwt_secret()
     now = int(time.time())
     header = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
-    payload = _b64url(
-        json.dumps(
-            {
-                "sub": user_id,
-                "sid": session_id,
-                "jti": _id_mod.uuid7(),
-                "iat": now,
-                "exp": now + ttl_seconds,
-            }
-        ).encode()
-    )
+    claims: dict = {
+        "sub": user_id,
+        "sid": session_id,
+        "jti": _id_mod.uuid7(),
+        "iat": now,
+        "exp": now + ttl_seconds,
+    }
+    if org_id is not None:
+        claims["oid"] = org_id
+    if workspace_id is not None:
+        claims["wid"] = workspace_id
+    payload = _b64url(json.dumps(claims).encode())
     signing_input = f"{header}.{payload}"
     sig = hmac.new(secret, signing_input.encode(), hashlib.sha256).digest()
     return f"{signing_input}.{_b64url(sig)}"
