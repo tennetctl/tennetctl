@@ -175,6 +175,215 @@ export interface FeatureFilters {
 }
 
 // ---------------------------------------------------------------------------
+// RBAC
+// ---------------------------------------------------------------------------
+
+export interface PlatformRoleData {
+  id: string;
+  name: string;
+  code: string;
+  category: string;
+  is_system: boolean;
+  is_active: boolean;
+  is_deleted: boolean;
+  description: string | null;
+  permission_count: number;
+  created_by: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlatformRoleListData {
+  items: PlatformRoleData[];
+  total: number;
+}
+
+export interface OrgRoleData {
+  id: string;
+  org_id: string;
+  name: string;
+  code: string;
+  category: string;
+  is_system: boolean;
+  is_active: boolean;
+  is_deleted: boolean;
+  description: string | null;
+  permission_count: number;
+  created_by: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrgRoleListData {
+  items: OrgRoleData[];
+  total: number;
+}
+
+export interface WorkspaceRoleData {
+  id: string;
+  workspace_id: string;
+  name: string;
+  code: string;
+  category: string;
+  is_system: boolean;
+  is_active: boolean;
+  is_deleted: boolean;
+  description: string | null;
+  permission_count: number;
+  created_by: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceRoleListData {
+  items: WorkspaceRoleData[];
+  total: number;
+}
+
+export interface PermissionData {
+  id: string;
+  resource: string;
+  action: string;
+  code: string;
+  description: string | null;
+  is_active: boolean;
+}
+
+export interface PermissionListData {
+  items: PermissionData[];
+  total: number;
+}
+
+export interface RolePermissionData {
+  id: string;
+  role_id: string;
+  permission_id: string;
+  resource: string;
+  action: string;
+  code: string;
+}
+
+export interface RolePermissionListData {
+  items: RolePermissionData[];
+  total: number;
+}
+
+export interface UserPlatformRoleData {
+  id: string;
+  user_id: string;
+  role_id: string;
+  role_name: string;
+  role_code: string;
+  assigned_by: string;
+  assigned_at: string;
+}
+
+export interface UserOrgRoleData {
+  id: string;
+  user_id: string;
+  org_id: string;
+  role_id: string;
+  role_name: string;
+  role_code: string;
+  assigned_by: string;
+  assigned_at: string;
+}
+
+export interface RbacCheckResult {
+  allowed: boolean;
+  permission: string;
+  reason: string | null;
+}
+
+export interface EffectivePermissionsData {
+  user_id: string;
+  permissions: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Feature Flags
+// ---------------------------------------------------------------------------
+
+export interface FeatureFlagData {
+  id: string;
+  code: string;
+  name: string;
+  product_id: string | null;
+  product_code: string | null;
+  product_name: string | null;
+  scope: "platform" | "org" | "workspace";
+  category: string;
+  flag_type: "boolean" | "kill_switch" | "experiment" | "rollout";
+  default_value: unknown;
+  status: "draft" | "active" | "deprecated" | "archived";
+  is_active: boolean;
+  is_deleted: boolean;
+  description: string | null;
+  created_by: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeatureFlagListData {
+  items: FeatureFlagData[];
+  total: number;
+}
+
+export interface FlagEnvironmentData {
+  id: string;
+  flag_id: string;
+  environment: "dev" | "staging" | "prod";
+  enabled: boolean;
+  value: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FlagEnvironmentListData {
+  items: FlagEnvironmentData[];
+  total: number;
+}
+
+export interface FlagTargetData {
+  id: string;
+  flag_id: string;
+  target_type: "org" | "workspace" | "user";
+  target_id: string;
+  enabled: boolean;
+  value: unknown;
+  created_at: string;
+}
+
+export interface FlagTargetListData {
+  items: FlagTargetData[];
+  total: number;
+}
+
+export interface FlagEvalResult {
+  flag_code: string;
+  enabled: boolean;
+  value: unknown;
+  source: string;
+}
+
+export interface FlagBootstrapData {
+  flags: Record<string, FlagEvalResult>;
+}
+
+export interface FeatureFlagFilters {
+  product_id?: string;
+  scope?: string;
+  status?: string;
+  flag_type?: string;
+  limit?: number;
+  offset?: number;
+}
+
+// ---------------------------------------------------------------------------
 // Audit
 // ---------------------------------------------------------------------------
 

@@ -48,7 +48,12 @@ async def check_login_rate_limit(*, username: str, ip_address: str | None) -> No
 
     Limit: 10 attempts per 60-second window per (username, ip) pair.
     Falls through silently if Valkey is unreachable.
+
+    Set DISABLE_RATE_LIMIT=1 to bypass entirely (dev mode).
     """
+    if os.environ.get("DISABLE_RATE_LIMIT", "").strip() == "1":
+        return
+
     import importlib  # noqa: PLC0415
     _errors_mod = importlib.import_module("04_backend.01_core.errors")
     AppError = _errors_mod.AppError

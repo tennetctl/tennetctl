@@ -106,8 +106,8 @@ services:
   # ---------------------------------------------------------------------------
   backend:
     build:
-      context: ../04_backend
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: 04_backend/Dockerfile
     container_name: tennetctl-backend
     restart: unless-stopped
     depends_on:

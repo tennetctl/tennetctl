@@ -23,6 +23,7 @@ fi
 echo "▶  backend  → http://localhost:${BACKEND_PORT}"
 DATABASE_URL="${DATABASE_URL}" \
 ALLOWED_ORIGINS="${ALLOWED_ORIGINS}" \
+DISABLE_RATE_LIMIT=1 \
   04_backend/.venv/bin/python -m uvicorn 04_backend.01_core.app:app \
     --host 0.0.0.0 \
     --port "${BACKEND_PORT}" \

@@ -94,6 +94,8 @@ export const NAV_MODULES: NavModule[] = [
           { label: "Sessions",       href: "/iam/sessions",       icon: Activity },
           { label: "Permissions",    href: "/iam/permissions",    icon: ShieldCheck },
           { label: "Roles",          href: "/iam/roles",          icon: FolderKey },
+          { label: "RBAC Check",     href: "/iam/rbac-check",     icon: KeyRound },
+          { label: "Feature Flags",  href: "/iam/feature-flags",  icon: Flag },
         ],
       },
       {

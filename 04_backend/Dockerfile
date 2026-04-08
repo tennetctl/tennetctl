@@ -21,7 +21,7 @@ WORKDIR /app
 # Install dependencies first for layer caching. We do not install the
 # project itself with uv (the source dirs use numeric prefixes that are
 # not legal Python package names — uvicorn loads them via --app-dir).
-COPY --chown=app:app pyproject.toml README.md ./
+COPY --chown=app:app 04_backend/pyproject.toml 04_backend/README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv && \
     uv pip install \
@@ -30,13 +30,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         "asyncpg>=0.30.0" \
         "pydantic>=2.9.0" \
         "pydantic-settings>=2.6.0" \
+        "argon2-cffi>=23.1.0" \
+        "redis>=5.2.0" \
     && chown -R app:app /app/.venv
 
 # Copy source as the runtime user (read-only at runtime via compose).
-COPY --chown=app:app 01_core ./01_core
-COPY --chown=app:app 02_features ./02_features
+COPY --chown=app:app 04_backend/01_core ./01_core
+COPY --chown=app:app 04_backend/02_features ./02_features
 # Copy scripts module needed by app imports (e.g. scripts.00_core._id)
-COPY --chown=app:app ../scripts ./scripts
+COPY --chown=app:app scripts ./scripts
 
 # Create the 04_backend namespace package directory structure so that
 # importlib.import_module("04_backend.01_core.config") resolves correctly.
