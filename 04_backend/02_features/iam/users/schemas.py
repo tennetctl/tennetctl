@@ -9,7 +9,6 @@ from pydantic import BaseModel, field_validator
 
 class UserData(BaseModel):
     id: str
-    org_id: str
     account_type: str
     auth_type: str
     username: str | None
