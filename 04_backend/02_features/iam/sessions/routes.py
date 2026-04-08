@@ -4,6 +4,7 @@ POST   /v1/sessions              — login (creates session, returns token pair)
 GET    /v1/sessions/me           — current user from Bearer token
 PATCH  /v1/sessions/{id}         — refresh token rotation
 PATCH  /v1/sessions/{id}/scope   — switch active org/workspace scope
+DELETE /v1/sessions              — logout all (revoke every session for user)
 DELETE /v1/sessions/{id}         — logout (soft-delete / revoke)
 """
 
@@ -94,6 +95,29 @@ async def switch_scope(
             session_id_audit=session_id,
         )
     return _resp.ok({"session_id": session_id, "org_id": body.target_org_id, "workspace_id": body.target_workspace_id})
+
+
+@router.delete("")
+async def logout_all(
+    token: dict = Depends(_auth.require_auth),
+) -> dict:
+    """Revoke every active session for the authenticated user.
+
+    The current session is preserved so the response can still be returned;
+    all other sessions are revoked. Useful after a password change or when
+    the user suspects credential compromise.
+    """
+    actor_id: str = token["sub"]
+    current_session_id: str = token.get("sid", "")
+    pool = _db.get_pool()
+    async with pool.acquire() as conn:
+        result = await _service.logout_all(
+            conn,
+            actor_id=actor_id,
+            current_session_id=current_session_id,
+            keep_current=True,
+        )
+    return _resp.ok(result)
 
 
 @router.delete("/{session_id}", status_code=204)

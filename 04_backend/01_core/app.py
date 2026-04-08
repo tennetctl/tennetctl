@@ -23,7 +23,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # Ensure project root is on sys.path so importlib paths resolve.
 _project_root = Path(__file__).resolve().parent.parent.parent
@@ -39,7 +40,50 @@ _vault_state = importlib.import_module("04_backend.01_core.vault_state")
 _jwt_utils = importlib.import_module("04_backend.01_core.jwt_utils")
 _settings = importlib.import_module("04_backend.01_core.settings")
 _ratelimit = importlib.import_module("04_backend.01_core.ratelimit")
-_logging = importlib.import_module("04_backend.01_core.logging")
+_logging = importlib.import_module("04_backend.01_core.log_config")
+_core_id = importlib.import_module("scripts.00_core._id")
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Adds standard security response headers on every request.
+
+    HSTS is only emitted outside of dev (TENNETCTL_ENV != 'dev') because
+    local dev runs over plain HTTP and browsers would pin the dev host.
+    """
+
+    def __init__(self, app, *, is_prod: bool) -> None:
+        super().__init__(app)
+        self._is_prod = is_prod
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Content-Security-Policy", "default-src 'self'")
+        response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+        if self._is_prod:
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
+        return response
+
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    """Attaches an X-Request-ID to every request for log/audit correlation.
+
+    If the client sends X-Request-ID, it is trusted and echoed. Otherwise
+    a fresh UUID v7 is generated. The ID is stored on request.state so
+    downstream code (services, audit) can read it.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or _core_id.uuid7()
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
 
 # Feature routes
 _vault_routes = importlib.import_module("04_backend.02_features.vault.runtime.routes")
@@ -75,14 +119,25 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS — allow the frontend dev server and any localhost port.
+    # CORS — allowed origins come from the ALLOWED_ORIGINS env var
+    # (comma-separated). Defaults to localhost dev origins.
+    _app_settings = _config.load_settings()
     fastapi_app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_origins=_app_settings.allowed_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Security headers on every response.
+    fastapi_app.add_middleware(
+        SecurityHeadersMiddleware,
+        is_prod=(_app_settings.tennetctl_env != "dev"),
+    )
+
+    # X-Request-ID propagation for log/audit correlation.
+    fastapi_app.add_middleware(RequestIdMiddleware)
 
     # Register error handlers
     _errors_mod.register_error_handlers(fastapi_app)

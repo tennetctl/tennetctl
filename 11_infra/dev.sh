@@ -45,8 +45,31 @@ BACKEND_PORT=58000
 FRONTEND_PORT=53000
 POSTGRES_PORT=55432
 
-# Write-role DSN against the docker postgres on its remapped host port.
-DATABASE_URL_DEV="postgresql://tennetctl_write:tennetctl_write_dev@127.0.0.1:${POSTGRES_PORT}/tennetctl"
+# Write-role DSN. Resolution order:
+#   1. $DATABASE_URL from the caller's environment (set this after running the setup wizard)
+#   2. 08_logs/.dev.env file   (auto-written by dev.sh when you pass --set-dsn, see below)
+#   3. Fatal error with a clear message
+DEV_ENV_FILE="${ROOT_DIR}/.dev.env"
+
+resolve_database_url() {
+  if [[ -n "${DATABASE_URL:-}" ]]; then
+    return 0  # caller already exported it
+  fi
+  if [[ -f "${DEV_ENV_FILE}" ]]; then
+    # shellcheck source=/dev/null
+    source "${DEV_ENV_FILE}"
+  fi
+  if [[ -z "${DATABASE_URL:-}" ]]; then
+    die "DATABASE_URL is not set. After running the setup wizard, run:
+    export DATABASE_URL=\"<write_dsn from setup output>\"
+  or save it once with:
+    echo 'export DATABASE_URL=\"<dsn>\"' >> ${DEV_ENV_FILE}
+  then re-run dev.sh start."
+  fi
+}
+
+# Frontend origin — matches FRONTEND_PORT above so CORS just works.
+ALLOWED_ORIGINS_DEV="http://localhost:${FRONTEND_PORT},http://127.0.0.1:${FRONTEND_PORT}"
 
 # ----- helpers ---------------------------------------------------------------
 
@@ -116,9 +139,9 @@ ensure_infra() {
 }
 
 ensure_backend_deps() {
-  if [[ ! -d "${ROOT_DIR}/04_backend/.venv" ]]; then
-    log "creating backend venv (uv sync)"
-    ( cd "${ROOT_DIR}/04_backend" && uv sync ) >> "${BACKEND_LOG}" 2>&1 \
+  if [[ ! -d "${ROOT_DIR}/.venv" ]]; then
+    log "creating root venv (uv sync)"
+    ( cd "${ROOT_DIR}" && uv sync ) >> "${BACKEND_LOG}" 2>&1 \
       || die "uv sync failed — see ${BACKEND_LOG}"
   fi
 }
@@ -137,12 +160,17 @@ start_backend() {
     return 0
   fi
   ensure_backend_deps
+  resolve_database_url
   log "starting backend on http://127.0.0.1:${BACKEND_PORT}"
   (
+    # Run from 04_backend/ so --app-dir 01_core resolves correctly, but use
+    # the root venv Python to avoid the 01_core/logging.py → stdlib circular
+    # import that bites the 04_backend venv's uvicorn reloader.
     cd "${ROOT_DIR}/04_backend"
-    DATABASE_URL="${DATABASE_URL_DEV}" \
+    DATABASE_URL="${DATABASE_URL}" \
+    ALLOWED_ORIGINS="${ALLOWED_ORIGINS_DEV}" \
     TENNETCTL_ENV=dev \
-    nohup .venv/bin/uvicorn app:app \
+    nohup "${ROOT_DIR}/.venv/bin/python" -m uvicorn app:app \
       --app-dir 01_core \
       --host 127.0.0.1 \
       --port "${BACKEND_PORT}" \
@@ -180,14 +208,17 @@ start_frontend() {
 }
 
 cmd_start() {
+  # Resolve DSN before reset_logs wipes the dir (so .dev.env survives across restarts)
+  resolve_database_url
   reset_logs
   ensure_infra
   start_backend
   start_frontend
   log "$(c_green 'all up')"
-  log "  backend  → http://127.0.0.1:${BACKEND_PORT}/healthz"
+  log "  backend  → http://127.0.0.1:${BACKEND_PORT}"
   log "  frontend → http://127.0.0.1:${FRONTEND_PORT}/"
   log "  logs     → ${LOG_DIR}/"
+  log "  sign in  → admin / ChangeMe123!  (change after first login)"
 }
 
 cmd_stop() {
@@ -241,7 +272,14 @@ main() {
     -h|--help|help)
       sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       ;;
-    *) die "unknown command: ${cmd} (use: start|stop|restart|down|status|logs)" ;;
+    set-dsn)
+      local dsn="${1:-}"
+      [[ -n "${dsn}" ]] || die "usage: dev.sh set-dsn <postgresql://...>"
+      mkdir -p "${LOG_DIR}"
+      printf 'export DATABASE_URL="%s"\n' "${dsn}" > "${DEV_ENV_FILE}"
+      log "saved DSN to ${DEV_ENV_FILE}"
+      ;;
+    *) die "unknown command: ${cmd} (use: start|stop|restart|down|status|logs|set-dsn)" ;;
   esac
 }
 

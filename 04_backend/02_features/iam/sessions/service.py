@@ -368,6 +368,44 @@ async def logout(conn: object, *, session_id: str, actor_id: str) -> None:
     )
 
 
+async def logout_all(
+    conn: object,
+    *,
+    actor_id: str,
+    current_session_id: str,
+    keep_current: bool = True,
+) -> dict:
+    """Revoke every active session belonging to actor_id.
+
+    If keep_current is True, the caller's current session is preserved so they
+    don't immediately lock themselves out of the request that is in flight.
+    Emits one audit event per revoked session.
+
+    Returns: {"revoked_count": N}
+    """
+    except_id = current_session_id if keep_current else None
+    revoked_ids = await _repo.revoke_all_sessions_for_user(
+        conn,
+        user_id=actor_id,
+        except_session_id=except_id,
+    )
+    scope = await _repo.get_active_scope(conn, current_session_id)
+    for sid in revoked_ids:
+        await _audit.emit(
+            conn,
+            category="iam",
+            action="session.logout",
+            outcome="success",
+            user_id=actor_id,
+            session_id=current_session_id,
+            org_id=scope.get("org_id"),
+            workspace_id=scope.get("workspace_id"),
+            target_id=sid,
+            target_type="iam_session",
+        )
+    return {"revoked_count": len(revoked_ids)}
+
+
 async def switch_scope(
     conn: object,
     session_id: str,

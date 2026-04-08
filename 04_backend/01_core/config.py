@@ -23,6 +23,15 @@ class Settings(BaseSettings):
         alias="TENNETCTL_ENV",
         description="Deployment environment. Used only for first-install seeding.",
     )
+    allowed_origins: str = Field(
+        default="http://localhost:53000,http://127.0.0.1:53000",
+        alias="ALLOWED_ORIGINS",
+        description="Comma-separated list of origins allowed by CORS.",
+    )
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
 
 def load_settings() -> Settings:

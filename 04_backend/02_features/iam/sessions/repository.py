@@ -238,6 +238,58 @@ async def revoke_session(conn: object, session_id: str) -> None:
     )
 
 
+async def revoke_all_sessions_for_user(
+    conn: object,
+    *,
+    user_id: str,
+    except_session_id: str | None = None,
+) -> list[str]:
+    """Revoke every active session belonging to the given user.
+
+    If except_session_id is set, that session is left alone (useful when the
+    user is calling this endpoint and wants to keep their current session).
+
+    Returns the list of session IDs that were revoked (for audit emission).
+    """
+    if except_session_id is None:
+        rows = await conn.fetch(  # type: ignore[union-attr]
+            """
+            UPDATE "03_iam"."20_fct_sessions"
+               SET status_id  = (
+                   SELECT id FROM "03_iam"."08_dim_session_statuses" WHERE code = 'revoked'
+               ),
+                   deleted_at = CURRENT_TIMESTAMP,
+                   is_active  = FALSE,
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE user_id   = $1
+               AND is_active = TRUE
+               AND deleted_at IS NULL
+            RETURNING id
+            """,
+            user_id,
+        )
+    else:
+        rows = await conn.fetch(  # type: ignore[union-attr]
+            """
+            UPDATE "03_iam"."20_fct_sessions"
+               SET status_id  = (
+                   SELECT id FROM "03_iam"."08_dim_session_statuses" WHERE code = 'revoked'
+               ),
+                   deleted_at = CURRENT_TIMESTAMP,
+                   is_active  = FALSE,
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE user_id   = $1
+               AND id       <> $2
+               AND is_active = TRUE
+               AND deleted_at IS NULL
+            RETURNING id
+            """,
+            user_id,
+            except_session_id,
+        )
+    return [r["id"] for r in rows]
+
+
 async def touch_session(conn: object, session_id: str) -> None:
     """Update last_seen_at EAV attr for the session."""
     import datetime as dt  # noqa: PLC0415

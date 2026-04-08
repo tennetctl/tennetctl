@@ -143,6 +143,10 @@ services:
     build:
       context: ../06_frontend
       dockerfile: Dockerfile
+      args:
+        # Browser reaches the backend on the host-mapped port. Override at build
+        # time for non-localhost deployments: NEXT_PUBLIC_API_URL=https://api.example.com
+        NEXT_PUBLIC_API_URL: "http://localhost:58000"
     container_name: tennetctl-frontend
     restart: unless-stopped
     depends_on:

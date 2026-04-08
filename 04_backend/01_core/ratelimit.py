@@ -16,6 +16,7 @@ cause a full auth outage. The error is logged to stderr.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import sys
 import time
@@ -58,7 +59,10 @@ async def check_login_rate_limit(*, username: str, ip_address: str | None) -> No
 
     window_seconds = 60
     max_attempts = 10
-    key = f"rl:login:{username}:{ip_address or 'no-ip'}"
+    # Hash the username component so a username containing ':' cannot
+    # collide with other rate-limit keys.
+    uname_hash = hashlib.sha256(username.encode("utf-8")).hexdigest()[:16]
+    key = f"rl:login:{uname_hash}:{ip_address or 'no-ip'}"
     now = time.time()
     window_start = now - window_seconds
 

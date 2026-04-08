@@ -59,7 +59,6 @@ export interface MeData {
 
 export interface UserData {
   id: string;
-  org_id: string;
   account_type: string;
   auth_type: string;
   username: string | null;
@@ -75,4 +74,41 @@ export interface UserData {
 export interface UserListData {
   items: UserData[];
   total: number;
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+export interface AuditEvent {
+  id: string;
+  org_id: string | null;
+  workspace_id: string | null;
+  user_id: string | null;
+  session_id: string | null;
+  category: string;
+  action: string;
+  outcome: string;
+  actor_id: string | null;
+  target_type: string | null;
+  target_id: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
+export interface AuditListData {
+  items: AuditEvent[];
+  total: number;
+}
+
+export interface AuditFilters {
+  limit?: number;
+  offset?: number;
+  org_id?: string;
+  user_id?: string;
+  session_id?: string;
+  category?: string;
+  action?: string;
+  outcome?: string;
 }
