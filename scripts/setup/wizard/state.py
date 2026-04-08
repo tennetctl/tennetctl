@@ -41,13 +41,13 @@ async def detect_install_state(conn: object) -> InstallState:
 
 
 async def _check_phase1(conn: object) -> bool:
-    """Phase 1 complete when the highest applied migration sequence >= 4."""
+    """Phase 1 complete when highest applied migration sequence >= 8."""
     try:
         row = await conn.fetchrow(  # type: ignore[union-attr]
             'SELECT COALESCE(MAX(sequence), -1) AS max_seq '
             'FROM "00_schema_migrations".applied_migrations'
         )
-        return row["max_seq"] >= 4
+        return row["max_seq"] >= 8
     except Exception as exc:
         msg = str(exc).lower()
         if "does not exist" in msg or "relation" in msg or "schema" in msg:
