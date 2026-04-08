@@ -156,7 +156,7 @@ async def _seed_jwt_secret(*, admin_dsn: str, write_dsn: str) -> None:
         # Check if JWT secret already exists
         existing = await conn.fetchrow(
             """
-            SELECT id FROM "02_vault"."10_fct_secrets"
+            SELECT id FROM "02_vault"."v_secrets"
              WHERE path = $1 AND deleted_at IS NULL AND is_active = TRUE
             """,
             _JWT_SECRET_PATH,

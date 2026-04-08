@@ -123,6 +123,13 @@ INSERT INTO "02_vault"."07_dim_attr_defs"
     (5, 4, 'key',         'Key',         'text', TRUE,  TRUE,  'Secret key name (e.g. DATABASE_URL). Unique per project+environment.'),
     (6, 4, 'description', 'Description', 'text', FALSE, FALSE, 'Optional description of what this secret is used for.');
 
+-- Seed: secret crypto attrs (path, ciphertext, nonce moved from wide columns to EAV)
+INSERT INTO "02_vault"."07_dim_attr_defs"
+    (id, entity_type_id, code, label, value_type, is_required, is_unique, description) VALUES
+    (16, 4, 'path',       'Path',       'text', TRUE,  FALSE, 'Slash-separated logical path identifying this secret (e.g. tennetctl/db/write_dsn). Unique among live rows via partial index on 20_dtl_attrs.'),
+    (17, 4, 'ciphertext', 'Ciphertext', 'text', TRUE,  FALSE, 'Base64url-encoded AES-256-GCM ciphertext of the plaintext secret value. Encrypted with the MDK. The AAD is the path value.'),
+    (18, 4, 'nonce',      'Nonce',      'text', TRUE,  FALSE, 'Base64url-encoded 12-byte GCM nonce used during encryption. Never reuse.');
+
 -- Seed: api_key attributes
 INSERT INTO "02_vault"."07_dim_attr_defs"
     (id, entity_type_id, code, label, value_type, is_required, is_unique, description) VALUES

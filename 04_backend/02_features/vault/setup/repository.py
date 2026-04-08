@@ -9,8 +9,9 @@ Functions accept an asyncpg Connection, never a Pool.
 
 from __future__ import annotations
 
-# Vault entity type code — stable, matches 06_dim_entity_types seed.
-_VAULT_ENTITY_CODE = "vault"
+# Entity type codes — stable, match 06_dim_entity_types seed.
+_VAULT_ENTITY_CODE  = "vault"
+_SECRET_ENTITY_CODE = "secret"
 
 
 async def _vault_entity_type_id(conn: object) -> int:
@@ -21,6 +22,17 @@ async def _vault_entity_type_id(conn: object) -> int:
     )
     if row is None:
         raise RuntimeError("vault entity type not found in 06_dim_entity_types")
+    return row["id"]
+
+
+async def _secret_entity_type_id(conn: object) -> int:
+    """Resolve the secret entity type ID from the dim table."""
+    row = await conn.fetchrow(  # type: ignore[union-attr]
+        'SELECT id FROM "02_vault"."06_dim_entity_types" WHERE code = $1',
+        _SECRET_ENTITY_CODE,
+    )
+    if row is None:
+        raise RuntimeError("secret entity type not found in 06_dim_entity_types")
     return row["id"]
 
 
@@ -158,36 +170,108 @@ async def insert_secret(
     nonce: str,
     created_by: str | None = None,
 ) -> None:
-    """Insert a new secret row into 10_fct_secrets."""
+    """Insert a new secret row into 10_fct_secrets (pure-EAV).
+
+    Writes the lean fct row (identity + housekeeping only) then inserts
+    path, ciphertext, and nonce into 20_dtl_attrs.
+    """
+    # Insert the lean fct row — no wide columns.
     await conn.execute(  # type: ignore[union-attr]
         """
         INSERT INTO "02_vault"."10_fct_secrets"
-            (id, path, ciphertext, nonce, is_active, is_test,
+            (id, is_active, is_test,
              created_by, updated_by, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, TRUE, FALSE,
-                $5, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, TRUE, FALSE,
+                $2, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         """,
         id,
-        path,
-        ciphertext,
-        nonce,
         created_by,
     )
+
+    # Resolve secret entity type id + attr_def ids by code.
+    et_id = await _secret_entity_type_id(conn)
+    ids = await _attr_ids(conn, et_id)
+
+    # Write path, ciphertext, nonce as EAV attrs.
+    text_attrs = {
+        "path":       path,
+        "ciphertext": ciphertext,
+        "nonce":      nonce,
+    }
+    for code, value in text_attrs.items():
+        await conn.execute(  # type: ignore[union-attr]
+            """
+            INSERT INTO "02_vault"."20_dtl_attrs"
+                (entity_type_id, entity_id, attr_def_id, key_text)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (entity_type_id, entity_id, attr_def_id) DO UPDATE
+                SET key_text = EXCLUDED.key_text,
+                    updated_at = CURRENT_TIMESTAMP
+            """,
+            et_id,
+            id,
+            ids[code],
+            value,
+        )
 
 
 async def fetch_secret_by_path(conn: object, path: str) -> dict | None:
     """Fetch ciphertext + nonce for a live secret by path.
 
-    Returns None if not found or soft-deleted.
+    Resolves entity_id via the path attr in 20_dtl_attrs, then checks the
+    fct row for liveness (is_active + deleted_at), then fetches crypto attrs.
+    Returns None if not found, soft-deleted, or inactive.
     """
-    row = await conn.fetchrow(  # type: ignore[union-attr]
+    et_id = await _secret_entity_type_id(conn)
+    ids = await _attr_ids(conn, et_id)
+
+    # Step 1: find entity_id by path value.
+    path_row = await conn.fetchrow(  # type: ignore[union-attr]
         """
-        SELECT id, path, ciphertext, nonce
-          FROM "02_vault"."10_fct_secrets"
-         WHERE path = $1
-           AND deleted_at IS NULL
-           AND is_active = TRUE
+        SELECT entity_id
+          FROM "02_vault"."20_dtl_attrs"
+         WHERE attr_def_id = $1
+           AND key_text    = $2
         """,
+        ids["path"],
         path,
     )
-    return dict(row) if row else None
+    if path_row is None:
+        return None
+
+    entity_id = path_row["entity_id"]
+
+    # Step 2: check fct row is live and active.
+    fct_row = await conn.fetchrow(  # type: ignore[union-attr]
+        """
+        SELECT id, is_active, deleted_at
+          FROM "02_vault"."10_fct_secrets"
+         WHERE id = $1
+        """,
+        entity_id,
+    )
+    if fct_row is None or not fct_row["is_active"] or fct_row["deleted_at"] is not None:
+        return None
+
+    # Step 3: fetch all attrs for this entity.
+    attr_rows = await conn.fetch(  # type: ignore[union-attr]
+        """
+        SELECT attr_def_id, key_text
+          FROM "02_vault"."20_dtl_attrs"
+         WHERE entity_type_id = $1
+           AND entity_id      = $2
+        """,
+        et_id,
+        entity_id,
+    )
+
+    id_to_code = {v: k for k, v in ids.items()}
+    attrs = {id_to_code[r["attr_def_id"]]: r["key_text"] for r in attr_rows
+             if r["attr_def_id"] in id_to_code}
+
+    return {
+        "id":         entity_id,
+        "path":       attrs.get("path"),
+        "ciphertext": attrs.get("ciphertext"),
+        "nonce":      attrs.get("nonce"),
+    }
