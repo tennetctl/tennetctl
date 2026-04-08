@@ -1,0 +1,13 @@
+title: "Setup — DB Bootstrap (Phase 1)"
+sub_feature: "01_db_bootstrap"
+feature: "00_setup"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  Phase 1 of the install wizard. Either bootstraps three Postgres roles
+  from a superuser DSN (Mode A) or accepts and verifies three
+  pre-provisioned DSNs (Mode B). Then applies the migrator bootstrap
+  migration by hand and runs `scripts.migrate up` for every other
+  pending migration. Converges on the same state regardless of mode:
+  full schema + three verified DSNs held in the wizard's memory.

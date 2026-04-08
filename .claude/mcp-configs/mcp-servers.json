@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "description": "Live documentation lookup — powers /docs command. No key required."
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp", "--browser", "chrome"],
+      "description": "Browser automation and testing via Playwright"
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
+      },
+      "description": "GitHub — PRs, issues, code search, repo ops. Needs: GitHub PAT (Settings → Developer settings → Personal access tokens)."
+    }
+  },
+  "_comments": {
+    "active": "Edit ~/.claude/mcp.json to enable servers. Keep under 5 active to preserve context window.",
+    "keyless_now": "context7 and playwright are active — no keys needed.",
+    "when_ready": "Add github and exa-web-search to ~/.claude/mcp.json once you have the API keys."
+  }
+}

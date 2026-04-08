@@ -1,0 +1,27 @@
+title: "IAM — Identity & Access Management"
+feature: "03_iam"
+db_schema: "03_iam"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  tennetctl's identity layer. V1 ships username+password only (Argon2id),
+  opaque session tokens stored as Argon2id hashes in the DB, and
+  httpOnly+Secure session cookies. No JWT, no OAuth, no MFA, no magic
+  links. Owns the 03_iam schema with users, sessions, and the IAM dim
+  and EAV tables.
+
+sub_features:
+  - number: 0
+    name: bootstrap
+    status: BUILDING
+    description: "Schema creation — 03_iam schema, users, sessions, dim tables, EAV. One migration, sequence 3."
+  - number: 1
+    name: auth
+    status: BUILDING
+    description: "Login, logout, current-user endpoints; session cookie middleware; password verification."
+
+migrations:
+  - "20260408_003_iam_bootstrap.sql"
+
+frontend_pages: []

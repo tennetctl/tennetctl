@@ -1,0 +1,14 @@
+title: "Setup — First Admin (Phase 3)"
+sub_feature: "03_first_admin"
+feature: "00_setup"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  Phase 3 of the install wizard. Prompts for the first admin's username,
+  email, and password; Argon2id-hashes the password; inserts one row into
+  03_iam.10_fct_users with account_type_id=default_admin and
+  auth_type_id=username_password; writes the matching EAV attrs
+  (username, email, password_hash); and commits the final system_meta
+  installed_at = now() in the same transaction. After Phase 3 the
+  install is complete.

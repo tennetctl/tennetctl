@@ -1,0 +1,177 @@
+# Pin the compose project name so it does not depend on the directory the
+# file lives in. Without this, moving docker-compose.yml between folders
+# orphans existing containers under the old project name.
+name: tennetctl
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 17 — primary data store
+  # All tennetctl state lives here. Three roles: read, write, admin.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17
+    container_name: tennetctl-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tennetctl
+      POSTGRES_USER: tennetctl_admin
+      POSTGRES_PASSWORD: tennetctl_admin_dev
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tennetctl_admin -d tennetctl"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Valkey 8 — Redis-compatible cache and rate-limiting
+  # Used for: API rate limits, session token cache, short-lived ephemeral state.
+  # Valkey is the open-source Redis fork maintained by the Linux Foundation.
+  # ---------------------------------------------------------------------------
+  valkey:
+    image: valkey/valkey:8
+    container_name: tennetctl-valkey
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey_data:/data
+    command: valkey-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # MinIO — S3-compatible object storage
+  # Used for: file uploads, audit log archives, secret version snapshots.
+  # Console at http://localhost:9001 (minioadmin / minioadmin_dev)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: tennetctl-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin_dev
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # MinIO Console
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # NATS 2.10 with JetStream — event bus and message streaming
+  # Used for: cross-module events (R-002), high-volume ingest, audit fan-out.
+  # JetStream provides durable message streams for guaranteed delivery.
+  # Monitor at http://localhost:8222
+  # ---------------------------------------------------------------------------
+  nats:
+    image: nats:2.10
+    container_name: tennetctl-nats
+    restart: unless-stopped
+    ports:
+      - "4222:4222"   # Client connections
+      - "8222:8222"   # HTTP monitoring
+    # NOTE: --max_payload is config-file-only on nats-server. The default
+    # 1MB is fine; raise it via a mounted nats.conf if we ever need to.
+    command:
+      - "--jetstream"
+      - "--store_dir=/data"
+      - "--http_port=8222"
+    volumes:
+      - nats_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8222/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Backend — FastAPI on Python 3.13
+  # Reads only DATABASE_URL from env. All other config lives in
+  # "00_schema_migrations"."10_fct_settings".
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../04_backend
+      dockerfile: Dockerfile
+    container_name: tennetctl-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://tennetctl_write:tennetctl_write_dev@postgres:5432/tennetctl
+      TENNETCTL_ENV: dev
+    ports:
+      - "58000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Hardening: non-root user, read-only fs, drop all capabilities,
+    # no new privileges. The image's /app/.venv is owned by root so we
+    # explicitly switch to a non-root uid at runtime via user.
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Frontend — Next.js 15 (App Router) + Tailwind v4
+  # Standalone build, runs as non-root.
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../06_frontend
+      dockerfile: Dockerfile
+    container_name: tennetctl-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+    ports:
+      - "53000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    user: "10002:10002"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_data:
+    driver: local
+  valkey_data:
+    driver: local
+  minio_data:
+    driver: local
+  nats_data:
+    driver: local

@@ -1,0 +1,240 @@
+openapi: "3.1.0"
+info:
+  title: "T-Vault — Setup API"
+  version: "1.0.0"
+  description: |
+    Lifecycle endpoints for the vault singleton. Vault init is NOT exposed as
+    an HTTP route in v1 — it happens only during the 00_setup install wizard,
+    which calls the service layer directly. These three routes cover
+    runtime seal/unseal/status after install.
+
+    Behaviour depends on the vault's unseal mode:
+
+    - manual:  POST /v1/vault/unseal accepts the Root Unseal Key on every boot.
+    - kms_*:   The vault auto-unseals at startup via workload identity. POST
+               /v1/vault/unseal returns 409 AUTO_UNSEAL_ACTIVE because the
+               operator cannot interfere with an auto-unseal flow.
+
+paths:
+
+  /v1/vault/unseal:
+    post:
+      summary: Unseal the vault (manual mode only)
+      description: |
+        Decrypt the Master Data Key into memory using the Root Unseal Key.
+        Must be called after every process restart in manual mode.
+
+        Returns 409 AUTO_UNSEAL_ACTIVE if the vault is configured with any
+        KMS unseal mode — those modes unseal automatically at startup and
+        the operator cannot submit a key.
+      operationId: vault_unseal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VaultUnsealRequest"
+            example:
+              unseal_key: "a3f8e2d1c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a4f5e6d7c8b9a0f1"
+      responses:
+        "200":
+          description: Vault unsealed. MDK is now in memory.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VaultStatusResponse"
+              example:
+                ok: true
+                data:
+                  status: "unsealed"
+                  unseal_mode: "manual"
+                  auto_unseal: false
+                  initialized_at: "2026-04-08T12:00:00Z"
+        "400":
+          description: Vault is not yet initialized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: "VAULT_NOT_INITIALIZED"
+                  message: "Vault has not been initialized. Run `tennetctl setup` first."
+        "403":
+          description: Wrong unseal key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: "WRONG_UNSEAL_KEY"
+                  message: "The provided unseal key does not match."
+        "409":
+          description: |
+            Either the vault is already unsealed, or this deployment uses an
+            auto-unseal backend and cannot accept a manual key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                already_unsealed:
+                  value:
+                    ok: false
+                    error:
+                      code: "VAULT_ALREADY_UNSEALED"
+                      message: "Vault is already unsealed."
+                auto_unseal_active:
+                  value:
+                    ok: false
+                    error:
+                      code: "AUTO_UNSEAL_ACTIVE"
+                      message: "Vault uses an auto-unseal backend (kms_azure). Manual unseal is not permitted."
+
+  /v1/vault/seal:
+    post:
+      summary: Seal the vault
+      description: |
+        Clears the Master Data Key from memory. All subsequent secret reads and
+        writes will return 503 VAULT_SEALED until the vault is unsealed again.
+        Works in all modes. In KMS modes, the next process boot will re-auto-unseal.
+        Returns 204 No Content on success.
+      operationId: vault_seal
+      responses:
+        "204":
+          description: Vault sealed. MDK cleared from memory.
+        "409":
+          description: Vault is already sealed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: "VAULT_ALREADY_SEALED"
+                  message: "Vault is already sealed."
+
+  /v1/vault/status:
+    get:
+      summary: Get vault status
+      description: |
+        Returns the current sealed/unsealed status of the vault, the selected
+        unseal mode, and whether the mode auto-unseals at startup. Never
+        returns any key material or ciphertext.
+      operationId: vault_get_status
+      responses:
+        "200":
+          description: Current vault status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VaultStatusResponse"
+              examples:
+                manual_sealed:
+                  value:
+                    ok: true
+                    data:
+                      status: "sealed"
+                      unseal_mode: "manual"
+                      auto_unseal: false
+                      initialized_at: "2026-04-08T12:00:00Z"
+                manual_unsealed:
+                  value:
+                    ok: true
+                    data:
+                      status: "unsealed"
+                      unseal_mode: "manual"
+                      auto_unseal: false
+                      initialized_at: "2026-04-08T12:00:00Z"
+                kms_azure_unsealed:
+                  value:
+                    ok: true
+                    data:
+                      status: "unsealed"
+                      unseal_mode: "kms_azure"
+                      auto_unseal: true
+                      initialized_at: "2026-04-08T12:00:00Z"
+                not_initialized:
+                  value:
+                    ok: true
+                    data:
+                      status: "not_initialized"
+                      unseal_mode: null
+                      auto_unseal: false
+                      initialized_at: null
+
+components:
+  schemas:
+
+    VaultUnsealRequest:
+      type: object
+      required:
+        - unseal_key
+      properties:
+        unseal_key:
+          type: string
+          description: Root Unseal Key — exactly 64 lowercase hex characters.
+          minLength: 64
+          maxLength: 64
+          pattern: "^[0-9a-f]{64}$"
+
+    VaultStatusData:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - not_initialized
+            - sealed
+            - unsealed
+          description: Current vault status.
+        unseal_mode:
+          type: string
+          enum:
+            - manual
+            - kms_azure
+            - kms_aws
+            - kms_gcp
+          nullable: true
+          description: |
+            Which UnsealBackend this deployment uses. Null until initialized.
+        auto_unseal:
+          type: boolean
+          description: |
+            True if the selected unseal mode requires no human interaction at
+            startup. False for manual mode. Drives whether the pod can scale
+            horizontally without operator involvement.
+        initialized_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the vault was initialized. Null if not yet initialized.
+
+    VaultStatusResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          $ref: "#/components/schemas/VaultStatusData"
+
+    ErrorResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+            message:
+              type: string
+              description: Human-readable error message.

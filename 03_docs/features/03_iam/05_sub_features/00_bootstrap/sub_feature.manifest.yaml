@@ -1,0 +1,14 @@
+title: "IAM — Bootstrap Schema"
+sub_feature: "00_bootstrap"
+feature: "03_iam"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  Creates the 03_iam schema and all its tables: 10_fct_users, 20_fct_sessions,
+  IAM dim tables (06_dim_account_types, 07_dim_auth_types,
+  08_dim_session_statuses), the shared 06_dim_entity_types and
+  07_dim_attr_defs for IAM EAV, and 20_dtl_attrs. Seeds all dim rows
+  (default_admin, default_user, username_password, the three attr_defs for
+  username/email/password_hash, etc.) in the same migration. One migration
+  file, sequence 3, depends_on [2].

@@ -1,0 +1,13 @@
+title: "Setup — Vault Init (Phase 2)"
+sub_feature: "02_vault_init"
+feature: "00_setup"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  Phase 2 of the install wizard. Prompts for unseal mode, collects
+  mode-specific config, calls `vault_setup_service.init_vault()` directly
+  (not via HTTP) to generate and wrap the MDK, then seeds the three DB
+  DSNs into the vault at tennetctl/db/{admin,write,read}_dsn using the
+  same vault secret service the runtime uses. Updates system_meta with
+  vault_initialized_at and unseal_mode.

@@ -1,0 +1,20 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - heading "Sign in" [level=1] [ref=e4]
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Username
+          - textbox "Username" [ref=e8]:
+            - /placeholder: admin
+        - generic [ref=e9]:
+          - generic [ref=e10]: Password
+          - textbox "Password" [ref=e11]:
+            - /placeholder: ••••••••
+        - button "Sign in" [ref=e12]
+      - generic [ref=e13]:
+        - link "← Home" [ref=e14] [cursor=pointer]:
+          - /url: /
+        - link "Vault status →" [ref=e15] [cursor=pointer]:
+          - /url: /vault
+  - alert [ref=e16]

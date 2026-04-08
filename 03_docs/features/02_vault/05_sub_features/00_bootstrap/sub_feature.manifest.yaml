@@ -1,0 +1,10 @@
+title: "T-Vault — Schema Bootstrap"
+sub_feature: "00_bootstrap"
+feature: "02_vault"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  Creates the 02_vault Postgres schema and the three shared EAV tables
+  (06_dim_entity_types, 07_dim_attr_defs, 20_dtl_attrs) used by every other
+  vault sub-feature. No backend code, no API — schema and seed data only.
