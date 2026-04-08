@@ -103,70 +103,46 @@ GRANT SELECT ON "02_vault"."02_dim_unseal_modes" TO tennetctl_write;
 
 -- ---------------------------------------------------------------------------
 -- 10_fct_vault
--- Singleton row representing the vault instance.
--- Created once at install time. Never deleted.
+-- Singleton row representing the vault instance. Pure EAV — no key-material
+-- columns on the fct row. All cryptographic material (mdk_ciphertext, nonce,
+-- unseal_key_hash, wrapped_mdk, unseal_config, initialized_at) lives in
+-- 20_dtl_attrs via the 'vault' entity attr_defs seeded in migration 001.
 --
--- The shape of the "key material" columns depends on unseal_mode_id:
---
---   manual mode:
---     mdk_ciphertext, mdk_nonce           — MDK encrypted with Root Unseal Key
---     unseal_key_hash                     — BLAKE2b of Root Unseal Key (verify on unseal)
---     read_key_hash                       — BLAKE2b of Root Read Key (reserved)
---     wrapped_mdk                         — NULL
---     unseal_config                       — NULL
---
---   kms_azure / kms_aws / kms_gcp modes:
---     wrapped_mdk                         — MDK wrapped by the cloud KMS key
---     unseal_config                       — JSONB with backend-specific metadata
---                                           (key vault URL, key name, key version,
---                                            KMS ARN, workload identity hints, etc.)
---     mdk_ciphertext, mdk_nonce           — NULL
---     unseal_key_hash, read_key_hash      — NULL
---
--- Plaintext of any key is NEVER stored here.
+-- Only the two FK columns (status_id, unseal_mode_id) plus standard fct
+-- housekeeping stay on this table — exactly what the database.md rule allows.
 -- ---------------------------------------------------------------------------
 CREATE TABLE "02_vault"."10_fct_vault" (
-    id               VARCHAR(36) NOT NULL,
-    status_id        SMALLINT    NOT NULL,
-    unseal_mode_id   SMALLINT    NOT NULL,
-    unseal_config    TEXT,
-    wrapped_mdk      TEXT,
-    mdk_ciphertext   TEXT,
-    mdk_nonce        TEXT,
-    unseal_key_hash  TEXT,
-    read_key_hash    TEXT,
-    initialized_at   TIMESTAMP,
-    created_at       TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at       TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id              VARCHAR(36) NOT NULL,
+    status_id       SMALLINT    NOT NULL,
+    unseal_mode_id  SMALLINT    NOT NULL,
+    is_active       BOOLEAN     NOT NULL DEFAULT TRUE,
+    is_test         BOOLEAN     NOT NULL DEFAULT FALSE,
+    deleted_at      TIMESTAMP,
+    created_by      VARCHAR(36),
+    updated_by      VARCHAR(36),
+    created_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_02vault_fct_vault              PRIMARY KEY (id),
     CONSTRAINT fk_02vault_fct_vault_status       FOREIGN KEY (status_id)
         REFERENCES "02_vault"."01_dim_vault_statuses" (id),
     CONSTRAINT fk_02vault_fct_vault_unseal_mode  FOREIGN KEY (unseal_mode_id)
-        REFERENCES "02_vault"."02_dim_unseal_modes" (id),
-    CONSTRAINT chk_02vault_fct_vault_init        CHECK (
-        -- Either not initialized yet, or initialized with exactly one form of key material
-        initialized_at IS NULL OR
-        -- manual mode: mdk_ciphertext + mdk_nonce + unseal_key_hash must all be set,
-        --              wrapped_mdk must be NULL
-        (unseal_mode_id = 1 AND
-         mdk_ciphertext IS NOT NULL AND mdk_nonce IS NOT NULL AND
-         unseal_key_hash IS NOT NULL AND
-         wrapped_mdk IS NULL) OR
-        -- kms_* modes: wrapped_mdk + unseal_config must be set,
-        --              mdk_ciphertext/mdk_nonce/unseal_key_hash must be NULL
-        (unseal_mode_id IN (2, 3, 4) AND
-         wrapped_mdk IS NOT NULL AND unseal_config IS NOT NULL AND
-         mdk_ciphertext IS NULL AND mdk_nonce IS NULL AND
-         unseal_key_hash IS NULL)
-    )
+        REFERENCES "02_vault"."02_dim_unseal_modes" (id)
 );
+
+-- Enforce the singleton: at most one live (non-deleted) vault row.
+-- A second vault initialisation is a bug, not a feature.
+CREATE UNIQUE INDEX uq_02vault_fct_vault_singleton
+    ON "02_vault"."10_fct_vault" ((TRUE))
+    WHERE deleted_at IS NULL;
 
 COMMENT ON TABLE "02_vault"."10_fct_vault" IS
     'Singleton vault instance. Exactly one row exists after initialization. '
-    'Holds the encrypted Master Data Key (MDK) in a shape that depends on the '
-    'selected unseal mode. Plaintext of any key is never stored. See the CHECK '
-    'constraint chk_02vault_fct_vault_init for the per-mode column requirements.';
+    'Pure-EAV: no key-material columns on this table. All cryptographic data '
+    '(mdk_ciphertext, mdk_nonce, unseal_key_hash, wrapped_mdk, unseal_config, '
+    'initialized_at) lives in 20_dtl_attrs under the vault entity attr_defs '
+    'seeded in migration 001. status_id and unseal_mode_id are FK IDs only — '
+    'allowed on fct_* rows per database.md.';
 
 COMMENT ON COLUMN "02_vault"."10_fct_vault".id IS
     'UUID v7 generated by the application on init.';
@@ -174,35 +150,7 @@ COMMENT ON COLUMN "02_vault"."10_fct_vault".status_id IS
     'FK to 01_dim_vault_statuses. 1 = sealed, 2 = unsealed. '
     'Updated on every seal/unseal operation.';
 COMMENT ON COLUMN "02_vault"."10_fct_vault".unseal_mode_id IS
-    'FK to 02_dim_unseal_modes. Selected at install time, immutable thereafter. '
-    'Determines which UnsealBackend the app dispatches to on boot.';
-COMMENT ON COLUMN "02_vault"."10_fct_vault".unseal_config IS
-    'JSONB (stored as TEXT for portability) containing backend-specific metadata. '
-    'kms_azure: { "vault_url": "...", "key_name": "...", "key_version": "..." }. '
-    'kms_aws:   { "key_arn": "...", "region": "..." }. '
-    'kms_gcp:   { "project": "...", "location": "...", "key_ring": "...", "key": "..." }. '
-    'NULL in manual mode.';
-COMMENT ON COLUMN "02_vault"."10_fct_vault".wrapped_mdk IS
-    'MDK wrapped by the cloud KMS key. base64url-encoded. '
-    'Used only in kms_azure / kms_aws / kms_gcp modes. NULL in manual mode.';
-COMMENT ON COLUMN "02_vault"."10_fct_vault".mdk_ciphertext IS
-    'AES-256-GCM ciphertext of the 32-byte Master Data Key, base64url-encoded. '
-    'Encrypted with the Root Unseal Key. Used only in manual mode. NULL in KMS modes.';
-COMMENT ON COLUMN "02_vault"."10_fct_vault".mdk_nonce IS
-    'AES-256-GCM 12-byte nonce used when encrypting mdk_ciphertext, base64url-encoded. '
-    'Used only in manual mode. NULL in KMS modes.';
-COMMENT ON COLUMN "02_vault"."10_fct_vault".unseal_key_hash IS
-    'BLAKE2b-256 hex digest of the Root Unseal Key. '
-    'Used to verify the key on unseal. Used only in manual mode. NULL in KMS modes.';
-COMMENT ON COLUMN "02_vault"."10_fct_vault".read_key_hash IS
-    'BLAKE2b-256 hex digest of the Root Read Key. '
-    'Reserved for future root-read operations. Used only in manual mode. NULL in KMS modes.';
-COMMENT ON COLUMN "02_vault"."10_fct_vault".initialized_at IS
-    'Timestamp of the first successful init. NULL = not yet initialized.';
-COMMENT ON COLUMN "02_vault"."10_fct_vault".created_at IS
-    'Row creation timestamp. Set once, never updated.';
-COMMENT ON COLUMN "02_vault"."10_fct_vault".updated_at IS
-    'Updated on every seal/unseal operation.';
+    'FK to 02_dim_unseal_modes. Selected at install time, immutable thereafter.';
 
 -- Only the write role needs INSERT/UPDATE; this table is never deleted.
 GRANT SELECT ON "02_vault"."10_fct_vault" TO tennetctl_read;
@@ -210,24 +158,33 @@ GRANT SELECT, INSERT, UPDATE ON "02_vault"."10_fct_vault" TO tennetctl_write;
 
 -- ---------------------------------------------------------------------------
 -- v_vault
--- Read view for the vault singleton. Excludes all key material.
--- Returns status, unseal mode, and timestamps — safe to include in API responses.
+-- Read view that pivots EAV attrs back alongside the two dim columns.
+-- Excludes all key material — safe to include in API responses.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW "02_vault"."v_vault" AS
 SELECT
     v.id,
-    s.code          AS status,
-    m.code          AS unseal_mode,
-    v.initialized_at,
+    s.code  AS status,
+    m.code  AS unseal_mode,
+    (
+        SELECT a.key_text
+          FROM "02_vault"."20_dtl_attrs" a
+         WHERE a.entity_type_id = (SELECT id FROM "02_vault"."06_dim_entity_types" WHERE code = 'vault')
+           AND a.entity_id = v.id
+           AND a.attr_def_id = (SELECT id FROM "02_vault"."07_dim_attr_defs"
+                                 WHERE entity_type_id = (SELECT id FROM "02_vault"."06_dim_entity_types" WHERE code = 'vault')
+                                   AND code = 'initialized_at')
+         LIMIT 1
+    )::timestamp  AS initialized_at,
     v.updated_at
 FROM "02_vault"."10_fct_vault" v
 JOIN "02_vault"."01_dim_vault_statuses" s ON v.status_id = s.id
-JOIN "02_vault"."02_dim_unseal_modes"  m ON v.unseal_mode_id = m.id;
+JOIN "02_vault"."02_dim_unseal_modes"   m ON v.unseal_mode_id = m.id;
 
 COMMENT ON VIEW "02_vault"."v_vault" IS
-    'Read-safe view of the vault singleton. '
-    'Excludes mdk_ciphertext, mdk_nonce, unseal_key_hash, read_key_hash, '
-    'wrapped_mdk, and unseal_config. The only view safe to include in API responses.';
+    'Read-safe view of the vault singleton. Pivots initialized_at from EAV. '
+    'Excludes all key material (mdk_ciphertext, mdk_nonce, unseal_key_hash, '
+    'read_key_hash, wrapped_mdk, unseal_config). Safe for API responses.';
 
 GRANT SELECT ON "02_vault"."v_vault" TO tennetctl_read;
 GRANT SELECT ON "02_vault"."v_vault" TO tennetctl_write;
@@ -235,6 +192,7 @@ GRANT SELECT ON "02_vault"."v_vault" TO tennetctl_write;
 -- DOWN =======================================================================
 
 DROP VIEW IF EXISTS "02_vault"."v_vault";
+DROP INDEX IF EXISTS "02_vault".uq_02vault_fct_vault_singleton;
 DROP TABLE IF EXISTS "02_vault"."10_fct_vault";
 DROP TABLE IF EXISTS "02_vault"."02_dim_unseal_modes";
 DROP TABLE IF EXISTS "02_vault"."01_dim_vault_statuses";

@@ -87,6 +87,7 @@ async def apply_pending(
                     INSERT INTO "00_schema_migrations".applied_migrations
                         (sequence, filename, feature, sub_feature, checksum, execution_ms)
                     VALUES ($1, $2, $3, $4, $5, $6)
+                    ON CONFLICT (sequence) DO NOTHING
                     """,
                     entry.sequence,
                     entry.filename,

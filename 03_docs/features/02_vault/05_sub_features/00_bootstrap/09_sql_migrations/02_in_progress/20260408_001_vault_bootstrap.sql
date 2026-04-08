@@ -129,6 +129,26 @@ INSERT INTO "02_vault"."07_dim_attr_defs"
     (7, 5, 'name',        'Name',        'text', TRUE,  FALSE, 'Human-readable label for this API key (e.g. "CI pipeline key").'),
     (8, 5, 'description', 'Description', 'text', FALSE, FALSE, 'Optional description of what this key is used for.');
 
+-- Seed: vault singleton attributes (entity_type_id = 1 = 'vault')
+-- These hold the key-material columns that the old wide-column 10_fct_vault carried.
+-- Storing them here means new key-wrapping schemes (KMS) can add attrs without ALTER TABLE.
+INSERT INTO "02_vault"."07_dim_attr_defs"
+    (id, entity_type_id, code, label, value_type, is_required, is_unique, description) VALUES
+    ( 9, 1, 'mdk_ciphertext',  'MDK Ciphertext',  'text', FALSE, FALSE,
+      'Base64url AES-256-GCM ciphertext of the 32-byte MDK. Manual mode only.'),
+    (10, 1, 'mdk_nonce',       'MDK Nonce',       'text', FALSE, FALSE,
+      'Base64url 12-byte GCM nonce used when encrypting mdk_ciphertext. Manual mode only.'),
+    (11, 1, 'unseal_key_hash', 'Unseal Key Hash', 'text', FALSE, FALSE,
+      'BLAKE2b-256 hex digest of the Root Unseal Key. Manual mode only.'),
+    (12, 1, 'read_key_hash',   'Read Key Hash',   'text', FALSE, FALSE,
+      'BLAKE2b-256 hex digest of the Root Read Key. Reserved. Manual mode only.'),
+    (13, 1, 'wrapped_mdk',     'Wrapped MDK',     'text', FALSE, FALSE,
+      'MDK wrapped by the cloud KMS key. Base64url-encoded. KMS modes only.'),
+    (14, 1, 'unseal_config',   'Unseal Config',   'jsonb', FALSE, FALSE,
+      'Backend-specific KMS metadata (vault URL, key name, ARN, etc.). KMS modes only.'),
+    (15, 1, 'initialized_at',  'Initialized At',  'text', FALSE, FALSE,
+      'ISO-8601 UTC timestamp of first successful vault init. NULL = not yet initialised.');
+
 GRANT SELECT ON "02_vault"."07_dim_attr_defs" TO tennetctl_read;
 GRANT SELECT ON "02_vault"."07_dim_attr_defs" TO tennetctl_write;
 

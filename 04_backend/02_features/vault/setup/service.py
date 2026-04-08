@@ -36,6 +36,7 @@ from __future__ import annotations
 import base64
 import importlib
 import secrets
+from datetime import datetime, timezone
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -94,6 +95,7 @@ async def init_vault_manual(conn: object, *, wrap_key: bytes) -> dict:
     unseal_key_hash = hashlib.blake2b(wrap_key, digest_size=32).hexdigest()
 
     vault_id = _id_mod.uuid7()
+    initialized_at_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     await _repo.insert_vault_row(
         conn,
         id=vault_id,
@@ -102,6 +104,7 @@ async def init_vault_manual(conn: object, *, wrap_key: bytes) -> dict:
         mdk_ciphertext=_b64_encode(mdk_ciphertext_bytes),
         mdk_nonce=_b64_encode(mdk_nonce),
         unseal_key_hash=unseal_key_hash,
+        initialized_at_iso=initialized_at_iso,
     )
 
     return {"mdk": mdk, "vault_id": vault_id}

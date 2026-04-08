@@ -56,11 +56,15 @@ async def _check_phase1(conn: object) -> bool:
 
 
 async def _check_phase2(conn: object) -> bool:
-    """Phase 2 complete when 10_fct_vault has a row with initialized_at set."""
+    """Phase 2 complete when v_vault shows a row with initialized_at set.
+
+    Reads the view rather than 10_fct_vault directly because initialized_at
+    was moved to EAV (20_dtl_attrs) and the view pivots it back.
+    """
     try:
         row = await conn.fetchrow(  # type: ignore[union-attr]
             'SELECT EXISTS ('
-            '  SELECT 1 FROM "02_vault"."10_fct_vault" WHERE initialized_at IS NOT NULL'
+            '  SELECT 1 FROM "02_vault"."v_vault" WHERE initialized_at IS NOT NULL'
             ') AS done'
         )
         return bool(row["done"])
