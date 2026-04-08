@@ -209,6 +209,18 @@ JOIN "03_iam"."06_dim_categories" cat ON cat.id = ff.category_id;
 
 COMMENT ON VIEW "03_iam".v_feature_flags IS 'Denormalized view of feature flags with scope, category, and product names';
 
+-- ---------------------------------------------------------------------------
+-- 9. Permissions
+-- ---------------------------------------------------------------------------
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON "03_iam"."10_fct_feature_flags"        TO tennetctl_write;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "03_iam"."40_lnk_flag_environments"     TO tennetctl_write;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "03_iam"."40_lnk_flag_platform_targets" TO tennetctl_write;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "03_iam"."40_lnk_flag_org_targets"      TO tennetctl_write;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "03_iam"."40_lnk_flag_workspace_targets" TO tennetctl_write;
+GRANT SELECT ON "03_iam".v_feature_flags TO tennetctl_write;
+GRANT SELECT ON "03_iam".v_feature_flags TO tennetctl_read;
+
 -- DOWN ====
 
 -- DROP VIEW "03_iam".v_feature_flags;
