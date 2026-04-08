@@ -101,6 +101,79 @@ export interface GroupListData {
   total: number;
 }
 
+export interface GroupMemberData {
+  id: string;
+  group_id: string;
+  user_id: string;
+  added_by: string;
+  is_active: boolean;
+  added_at: string;
+  username: string | null;
+  email: string | null;
+}
+
+export interface GroupMemberListData {
+  items: GroupMemberData[];
+  total: number;
+}
+
+// ---------------------------------------------------------------------------
+// Products
+// ---------------------------------------------------------------------------
+
+export interface ProductData {
+  id: string;
+  name: string;
+  code: string;
+  category: string;
+  is_sellable: boolean;
+  is_active: boolean;
+  is_deleted: boolean;
+  description: string | null;
+  created_by: string;
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductListData {
+  items: ProductData[];
+  total: number;
+}
+
+// ---------------------------------------------------------------------------
+// Features
+// ---------------------------------------------------------------------------
+
+export interface FeatureData {
+  id: string;
+  code: string;
+  name: string;
+  scope: string;
+  category: string;
+  product_id: string | null;
+  product_code: string | null;
+  product_name: string | null;
+  is_active: boolean;
+  is_deleted: boolean;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeatureListData {
+  items: FeatureData[];
+  total: number;
+}
+
+export interface FeatureFilters {
+  product_id?: string;
+  scope?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}
+
 // ---------------------------------------------------------------------------
 // Audit
 // ---------------------------------------------------------------------------

@@ -29,6 +29,8 @@ import {
   BarChart3,
   Filter,
   UsersRound,
+  Package,
+  Flag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -92,6 +94,13 @@ export const NAV_MODULES: NavModule[] = [
           { label: "Sessions",       href: "/iam/sessions",       icon: Activity },
           { label: "Permissions",    href: "/iam/permissions",    icon: ShieldCheck },
           { label: "Roles",          href: "/iam/roles",          icon: FolderKey },
+        ],
+      },
+      {
+        label: "Catalogue",
+        items: [
+          { label: "Products",       href: "/iam/products",       icon: Package },
+          { label: "Features",       href: "/iam/features",       icon: Flag },
         ],
       },
       {
