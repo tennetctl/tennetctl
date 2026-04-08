@@ -1,0 +1,11 @@
+title: "SQL Migrator — Runner"
+sub_feature: "01_runner"
+feature: "01_sql_migrator"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  The Python migration runner (scripts/migrate.py). Reads migration.yaml files,
+  builds a globally ordered migration list, diffs against applied_migrations,
+  and applies new SQL files incrementally. Supports up, down, status, and
+  validate commands. Safe for CI/CD pipelines.

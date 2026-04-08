@@ -1,0 +1,24 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - heading "Vault Status" [level=1] [ref=e4]
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Vault
+          - generic [ref=e8]: unsealed
+        - generic [ref=e9]:
+          - generic [ref=e10]:
+            - term [ref=e11]: Initialized
+            - definition [ref=e12]: "Yes"
+          - generic [ref=e13]:
+            - term [ref=e14]: Unseal mode
+            - definition [ref=e15]: manual
+          - generic [ref=e16]:
+            - term [ref=e17]: Initialized at
+            - definition [ref=e18]: 08/04/2026, 14:03:50
+      - generic [ref=e19]:
+        - link "← Home" [ref=e20] [cursor=pointer]:
+          - /url: /
+        - link "Sign in →" [ref=e21] [cursor=pointer]:
+          - /url: /iam
+  - alert [ref=e22]

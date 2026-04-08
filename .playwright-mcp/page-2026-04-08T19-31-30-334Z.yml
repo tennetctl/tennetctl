@@ -1,0 +1,143 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - button "Open menu" [ref=e5]:
+          - img [ref=e6]
+        - link "T" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e9]: T
+        - navigation "Modules" [ref=e10]:
+          - link "IAM" [ref=e11] [cursor=pointer]:
+            - /url: /iam
+            - img [ref=e12]
+          - link "Vault" [ref=e15] [cursor=pointer]:
+            - /url: /vault
+            - img [ref=e16]
+          - link "Audit" [ref=e18] [cursor=pointer]:
+            - /url: /audit
+            - img [ref=e19]
+        - generic [ref=e24]:
+          - button "Toggle theme" [ref=e25]:
+            - img [ref=e26]
+          - button [ref=e28]:
+            - img [ref=e30]
+            - img [ref=e33]
+    - generic [ref=e35]:
+      - dialog "IAM navigation" [ref=e36]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - img [ref=e41]
+            - generic [ref=e44]:
+              - generic [ref=e45]:
+                - generic [ref=e46]: IAM
+                - generic [ref=e47]: "03"
+              - paragraph [ref=e48]: Identity, users & access
+          - navigation "IAM navigation" [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51]: Overview
+              - list [ref=e52]:
+                - listitem [ref=e53]:
+                  - link "Dashboard" [ref=e54] [cursor=pointer]:
+                    - /url: /iam
+                    - img [ref=e55]
+                    - generic [ref=e60]: Dashboard
+            - generic [ref=e62]:
+              - generic [ref=e63]: Identity
+              - list [ref=e64]:
+                - listitem [ref=e65]:
+                  - link "Users" [ref=e66] [cursor=pointer]:
+                    - /url: /iam/users
+                    - img [ref=e67]
+                    - generic [ref=e72]: Users
+                - listitem [ref=e73]:
+                  - link "Active Users" [ref=e74] [cursor=pointer]:
+                    - /url: /iam/users/active
+                    - img [ref=e75]
+                    - generic [ref=e79]: Active Users
+                - listitem [ref=e80]:
+                  - link "Suspended" [ref=e81] [cursor=pointer]:
+                    - /url: /iam/users/suspended
+                    - img [ref=e82]
+                    - generic [ref=e87]: Suspended
+            - generic [ref=e88]:
+              - generic [ref=e89]: Tenancy
+              - list [ref=e90]:
+                - listitem [ref=e91]:
+                  - link "Organizations" [ref=e92] [cursor=pointer]:
+                    - /url: /iam/organizations
+                    - img [ref=e93]
+                    - generic [ref=e97]: Organizations
+                - listitem [ref=e98]:
+                  - link "Workspaces" [ref=e99] [cursor=pointer]:
+                    - /url: /iam/workspaces
+                    - img [ref=e100]
+                    - generic [ref=e104]: Workspaces
+                - listitem [ref=e105]:
+                  - link "Memberships" [ref=e106] [cursor=pointer]:
+                    - /url: /iam/memberships
+                    - img [ref=e107]
+                    - generic [ref=e111]: Memberships
+            - generic [ref=e112]:
+              - generic [ref=e113]: Access
+              - list [ref=e114]:
+                - listitem [ref=e115]:
+                  - link "Sessions" [ref=e116] [cursor=pointer]:
+                    - /url: /iam/sessions
+                    - img [ref=e117]
+                    - generic [ref=e119]: Sessions
+                - listitem [ref=e120]:
+                  - link "Permissions" [ref=e121] [cursor=pointer]:
+                    - /url: /iam/permissions
+                    - img [ref=e122]
+                    - generic [ref=e125]: Permissions
+                - listitem [ref=e126]:
+                  - link "Roles" [ref=e127] [cursor=pointer]:
+                    - /url: /iam/roles
+                    - img [ref=e128]
+                    - generic [ref=e131]: Roles
+            - generic [ref=e132]:
+              - generic [ref=e133]: Config
+              - list [ref=e134]:
+                - listitem [ref=e135]:
+                  - link "Settings" [ref=e136] [cursor=pointer]:
+                    - /url: /iam/settings
+                    - img [ref=e137]
+                    - generic [ref=e140]: Settings
+                - listitem [ref=e141]:
+                  - link "Domains" [ref=e142] [cursor=pointer]:
+                    - /url: /iam/domains
+                    - img [ref=e143]
+                    - generic [ref=e146]: Domains
+          - generic [ref=e147]:
+            - paragraph [ref=e148]: Active Scope
+            - generic [ref=e149]:
+              - generic [ref=e150]:
+                - generic [ref=e151]: Org
+                - generic [ref=e152]: tennetctl
+              - generic [ref=e153]:
+                - generic [ref=e154]: Workspace
+                - generic [ref=e155]: default
+      - main [ref=e156]:
+        - generic [ref=e159]:
+          - navigation "Breadcrumb" [ref=e160]:
+            - generic [ref=e161]: IAM
+            - generic [ref=e162]: /
+            - generic [ref=e163]: Overview
+          - heading "Identity & Access" [level=1] [ref=e164]
+          - paragraph [ref=e165]: Sign in, manage users, and inspect sessions.
+        - generic [ref=e166]:
+          - generic [ref=e167]:
+            - heading "Signed in" [level=3] [ref=e169]
+            - generic [ref=e170]:
+              - paragraph [ref=e171]: Signed in as admin
+              - paragraph [ref=e172]: Session 019d6e8d…
+            - generic [ref=e173]:
+              - button "View Users" [ref=e174]
+              - button "Sign out" [ref=e175]
+          - generic [ref=e176]:
+            - heading "About this module" [level=3] [ref=e178]
+            - generic [ref=e179]:
+              - paragraph [ref=e180]: IAM (feature 03) is the identity root. It manages users, organizations, workspaces, and sessions. Every other feature depends on a valid session issued here.
+              - paragraph [ref=e181]: Sign in with a bootstrapped operator account to exercise the other modules. Tokens are stored in localStorage and used by subsequent API calls.
+  - alert [ref=e182]

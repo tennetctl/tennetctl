@@ -1,0 +1,8 @@
+feature: "03_iam"
+sub_feature: "04_workspaces"
+migrations:
+  - file: "20260408_007_iam_workspaces.sql"
+    sequence: 7
+    description: "Create 03_iam workspace status dim table, 10_fct_workspaces, workspace slug index, and v_workspaces view"
+    depends_on: [6]
+    reversible: true

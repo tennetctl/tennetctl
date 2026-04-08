@@ -1,0 +1,13 @@
+title: "Setup — Interactive Install Wizard"
+sub_feature: "00_wizard"
+feature: "00_setup"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  The interactive CLI shell that drives the first-run install. Owns the
+  `tennetctl setup` command, the prompt loop, input validation, and the
+  resume-from-phase logic. Contains no DB logic of its own — delegates
+  every mutation to the phase sub-features (01_db_bootstrap, 02_vault_init,
+  03_first_admin, 04_settings). Writes no files to disk — all install
+  state lives in Postgres.

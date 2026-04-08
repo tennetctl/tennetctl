@@ -1,0 +1,141 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "T tennetctl S-Control" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: T
+        - generic [ref=e8]: tennetctl
+        - generic [ref=e9]: S-Control
+      - navigation "Modules" [ref=e11]:
+        - link "IAM 03" [ref=e12] [cursor=pointer]:
+          - /url: /iam
+          - img [ref=e13]
+          - generic [ref=e16]: IAM
+          - generic [ref=e17]: "03"
+        - link "Vault 02" [ref=e18] [cursor=pointer]:
+          - /url: /vault
+          - img [ref=e19]
+          - generic [ref=e21]: Vault
+          - generic [ref=e22]: "02"
+        - link "Audit 04" [ref=e23] [cursor=pointer]:
+          - /url: /audit
+          - img [ref=e24]
+          - generic [ref=e29]: Audit
+          - generic [ref=e30]: "04"
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - generic [ref=e33]: Search
+          - generic [ref=e34]: ⌘
+          - generic [ref=e35]: K
+        - button "Toggle theme" [ref=e36]:
+          - img [ref=e37]
+        - button [disabled]:
+          - img
+  - generic [ref=e39]:
+    - complementary [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - img [ref=e44]
+          - generic [ref=e47]:
+            - generic [ref=e48]:
+              - generic [ref=e49]: IAM
+              - generic [ref=e50]: "03"
+            - paragraph [ref=e51]: Identity, users & access
+        - navigation "IAM navigation" [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: Overview
+            - list [ref=e55]:
+              - listitem [ref=e56]:
+                - link "Dashboard" [ref=e57] [cursor=pointer]:
+                  - /url: /iam
+                  - img [ref=e58]
+                  - generic [ref=e63]: Dashboard
+          - generic [ref=e64]:
+            - generic [ref=e65]: Identity
+            - list [ref=e66]:
+              - listitem [ref=e67]:
+                - link "Users" [ref=e68] [cursor=pointer]:
+                  - /url: /iam/users
+                  - img [ref=e69]
+                  - generic [ref=e74]: Users
+              - listitem [ref=e76]:
+                - link "Active Users" [ref=e77] [cursor=pointer]:
+                  - /url: /iam/users/active
+                  - img [ref=e78]
+                  - generic [ref=e82]: Active Users
+              - listitem [ref=e83]:
+                - link "Suspended" [ref=e84] [cursor=pointer]:
+                  - /url: /iam/users/suspended
+                  - img [ref=e85]
+                  - generic [ref=e90]: Suspended
+          - generic [ref=e91]:
+            - generic [ref=e92]: Tenancy
+            - list [ref=e93]:
+              - listitem [ref=e94]:
+                - link "Organizations" [ref=e95] [cursor=pointer]:
+                  - /url: /iam/organizations
+                  - img [ref=e96]
+                  - generic [ref=e100]: Organizations
+              - listitem [ref=e101]:
+                - link "Workspaces" [ref=e102] [cursor=pointer]:
+                  - /url: /iam/workspaces
+                  - img [ref=e103]
+                  - generic [ref=e107]: Workspaces
+              - listitem [ref=e108]:
+                - link "Memberships" [ref=e109] [cursor=pointer]:
+                  - /url: /iam/memberships
+                  - img [ref=e110]
+                  - generic [ref=e114]: Memberships
+          - generic [ref=e115]:
+            - generic [ref=e116]: Access
+            - list [ref=e117]:
+              - listitem [ref=e118]:
+                - link "Sessions" [ref=e119] [cursor=pointer]:
+                  - /url: /iam/sessions
+                  - img [ref=e120]
+                  - generic [ref=e122]: Sessions
+              - listitem [ref=e123]:
+                - link "Permissions" [ref=e124] [cursor=pointer]:
+                  - /url: /iam/permissions
+                  - img [ref=e125]
+                  - generic [ref=e128]: Permissions
+              - listitem [ref=e129]:
+                - link "Roles" [ref=e130] [cursor=pointer]:
+                  - /url: /iam/roles
+                  - img [ref=e131]
+                  - generic [ref=e134]: Roles
+          - generic [ref=e135]:
+            - generic [ref=e136]: Config
+            - list [ref=e137]:
+              - listitem [ref=e138]:
+                - link "Settings" [ref=e139] [cursor=pointer]:
+                  - /url: /iam/settings
+                  - img [ref=e140]
+                  - generic [ref=e143]: Settings
+              - listitem [ref=e144]:
+                - link "Domains" [ref=e145] [cursor=pointer]:
+                  - /url: /iam/domains
+                  - img [ref=e146]
+                  - generic [ref=e149]: Domains
+        - generic [ref=e150]:
+          - paragraph [ref=e151]: Active Scope
+          - generic [ref=e152]:
+            - generic [ref=e153]:
+              - generic [ref=e154]: Org
+              - generic [ref=e155]: tennetctl
+            - generic [ref=e156]:
+              - generic [ref=e157]: Workspace
+              - generic [ref=e158]: default
+    - main [ref=e159]:
+      - generic [ref=e161]:
+        - generic [ref=e162]:
+          - navigation "Breadcrumb" [ref=e163]:
+            - generic [ref=e164]: IAM
+            - generic [ref=e165]: /
+            - generic [ref=e166]: Users
+          - heading "Users" [level=1] [ref=e167]
+          - paragraph [ref=e168]: All user accounts visible to the current scope.
+        - generic [ref=e169]:
+          - button "New user" [disabled]:
+            - img
+            - text: New user

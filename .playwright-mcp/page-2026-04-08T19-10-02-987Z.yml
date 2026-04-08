@@ -1,0 +1,171 @@
+- generic:
+  - generic:
+    - banner:
+      - generic:
+        - link:
+          - /url: /
+          - generic:
+            - generic: T
+          - generic: tennetctl
+          - generic: S-Control
+        - navigation:
+          - link:
+            - /url: /iam
+            - img
+            - generic: IAM
+            - generic: "03"
+          - link:
+            - /url: /vault
+            - img
+            - generic: Vault
+            - generic: "02"
+          - link:
+            - /url: /audit
+            - img
+            - generic: Audit
+            - generic: "04"
+        - generic:
+          - generic:
+            - generic: Search
+            - generic: ⌘
+            - generic: K
+          - button:
+            - img
+          - button [expanded]:
+            - generic:
+              - img
+            - generic: admin
+            - img
+    - generic:
+      - complementary:
+        - generic:
+          - generic:
+            - img
+          - generic:
+            - generic:
+              - generic: IAM
+              - generic: "03"
+            - paragraph: Identity, users & access
+        - navigation:
+          - generic:
+            - generic: Overview
+            - list:
+              - listitem:
+                - link:
+                  - /url: /iam
+                  - img
+                  - generic: Dashboard
+          - generic:
+            - generic: Identity
+            - list:
+              - listitem:
+                - link:
+                  - /url: /iam/users
+                  - img
+                  - generic: Users
+              - listitem:
+                - link:
+                  - /url: /iam/users/active
+                  - img
+                  - generic: Active Users
+              - listitem:
+                - link:
+                  - /url: /iam/users/suspended
+                  - img
+                  - generic: Suspended
+          - generic:
+            - generic: Tenancy
+            - list:
+              - listitem:
+                - link:
+                  - /url: /iam/organizations
+                  - img
+                  - generic: Organizations
+              - listitem:
+                - link:
+                  - /url: /iam/workspaces
+                  - img
+                  - generic: Workspaces
+              - listitem:
+                - link:
+                  - /url: /iam/memberships
+                  - img
+                  - generic: Memberships
+          - generic:
+            - generic: Access
+            - list:
+              - listitem:
+                - link:
+                  - /url: /iam/sessions
+                  - img
+                  - generic: Sessions
+              - listitem:
+                - link:
+                  - /url: /iam/permissions
+                  - img
+                  - generic: Permissions
+              - listitem:
+                - link:
+                  - /url: /iam/roles
+                  - img
+                  - generic: Roles
+          - generic:
+            - generic: Config
+            - list:
+              - listitem:
+                - link:
+                  - /url: /iam/settings
+                  - img
+                  - generic: Settings
+              - listitem:
+                - link:
+                  - /url: /iam/domains
+                  - img
+                  - generic: Domains
+        - generic:
+          - paragraph: Active Scope
+          - generic:
+            - generic:
+              - generic: Org
+              - generic: tennetctl
+            - generic:
+              - generic: Workspace
+              - generic: default
+      - main:
+        - generic:
+          - generic:
+            - navigation:
+              - generic: IAM
+              - generic: /
+              - generic: Users
+            - heading [level=1]: Users
+            - paragraph: All user accounts visible to the current scope.
+          - generic:
+            - button [disabled]:
+              - img
+              - text: New user
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - img
+              - generic:
+                - paragraph: Could not load users
+                - paragraph: Not signed in. Go to Overview → Sign in.
+  - status [ref=e189]:
+    - generic [ref=e190]:
+      - img [ref=e192]
+      - generic [ref=e194]:
+        - text: Static route
+        - button [ref=e199] [cursor=pointer]:
+          - img [ref=e196]
+  - alert
+  - menu "admin" [active] [ref=e200]:
+    - generic [ref=e201]: Signed in
+    - menuitem "Profile" [ref=e202]:
+      - img [ref=e203]
+      - text: Profile
+    - separator [ref=e206]
+    - menuitem "Sign out" [ref=e207]:
+      - img [ref=e208]
+      - text: Sign out

@@ -1,0 +1,8 @@
+feature: "03_iam"
+sub_feature: "00_bootstrap"
+migrations:
+  - file: "20260408_003_iam_bootstrap.sql"
+    sequence: 3
+    description: "Create 03_iam schema, users, sessions, dim tables, and EAV attr defs; seed all dim rows"
+    depends_on: [2]
+    reversible: true

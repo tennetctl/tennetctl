@@ -1,0 +1,11 @@
+title: "T-Vault — Setup (Init / Unseal / Seal)"
+sub_feature: "01_setup"
+feature: "02_vault"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  Vault init, unseal, and seal lifecycle. Operator provides two SHA-256 keys
+  (Root Unseal Key + Root Read Key) at init time. The vault starts sealed on
+  every process restart and must be explicitly unsealed. This sub-feature owns
+  the 10_fct_vault singleton table and the four lifecycle API endpoints.

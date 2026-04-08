@@ -1,0 +1,12 @@
+title: "T-Vault — AWS KMS Auto-Unseal"
+sub_feature: "03_kms_aws"
+feature: "02_vault"
+status: PLANNED
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  AWS KMS auto-unseal backend. Wraps the MDK with a KMS key at install time;
+  pods call Decrypt on every boot using IRSA (EKS workload identity).
+  Implements the UnsealBackend protocol defined in 01_setup. No schema changes.
+
+  PLANNED — not built in v1. Will be built when tennetctl is deployed on EKS.

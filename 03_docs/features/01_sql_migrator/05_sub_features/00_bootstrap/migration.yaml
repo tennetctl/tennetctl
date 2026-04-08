@@ -1,0 +1,11 @@
+feature: "01_sql_migrator"
+sub_feature: "00_bootstrap"
+migrations:
+  - file: "20260408_000_schema_migrations_bootstrap.sql"
+    sequence: 0
+    description: "Bootstrap the 00_schema_migrations schema and applied_migrations table"
+    depends_on: []
+    reversible: true
+    notes: |
+      Special case: sequence 000 is applied by hand (psql) on a fresh database
+      before the runner exists. All other migrations use sequence >= 001.

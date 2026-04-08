@@ -44,7 +44,7 @@ Sub-features (in order):
 2. Authentication — login, signup, password, magic links
 3. Sessions — refresh token families, device trust, reuse detection
 4. MFA — TOTP, passkeys (WebAuthn), backup codes
-5. Social login — Google, GitHub, GitLab (OAuth2 callback)
+5. Social login — Google, GitHub, GitLab (OAuth2 callback via **authlib**)
 6. RBAC — roles, permissions, groups, enforcement
 7. API keys and service accounts
 8. OAuth2/OIDC provider — auth code + PKCE, JWKS, discovery endpoint
@@ -52,6 +52,16 @@ Sub-features (in order):
 10. Invitations and invite campaigns
 11. Impersonation (platform admin only)
 12. Admin UI — manage users, orgs, roles from dashboard
+
+**JWT migration plan (when items 5 or 8 land):**
+
+The current internal JWT implementation uses homebrew HS256 (`04_backend/01_core/jwt_utils.py`) backed by a vault secret. When social logins or the OIDC provider sub-feature is built:
+
+1. Add **authlib** as the JWT backend — migrate `jwt_utils.py` to authlib HS256 first (no behavior change, clean interface swap).
+2. Add **RS256 key rotation** — asymmetric key pair stored in vault, JWKS endpoint for third-party token validation.
+3. Social logins use authlib's OAuth2 client; the internal session token stays on the same authlib-backed path.
+
+The interface (`issue_token` / `verify_token`) is already stable — no routes or services need to change.
 
 **Why second:** Every other module needs authentication. IAM must exist before anything else can have a meaningful UI.
 
@@ -159,6 +169,17 @@ A module is complete when:
 - [ ] `feature.manifest.yaml` status is `DONE`
 - [ ] A basic E2E test covers the primary user flow
 - [ ] The module is documented in `docs/00_main/06_setup.md` if it requires configuration
+
+---
+
+## Planned Security Hardening (pre-prod)
+
+Work that is scoped and ready but deferred to a dedicated hardening sprint:
+
+- **Rate limiting on token refresh** (`PATCH /v1/sessions/{id}`) — the login endpoint is already rate-limited (10/60s per username+IP via Valkey). The refresh endpoint needs the same treatment. Current risk: a stolen refresh token can be rotated without any brute-force protection.
+- **Rate limiter key collision fix** — the current Valkey key is `rl:login:{username}:{ip}`. A username containing `:` could produce collisions with other entries. Fix: URL-encode or hash the username component before building the key (e.g. `hashlib.sha256(username.encode()).hexdigest()[:16]`).
+
+Both items are low-risk in development but must land before any production exposure.
 
 ---
 

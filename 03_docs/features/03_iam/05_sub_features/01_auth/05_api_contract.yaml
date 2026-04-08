@@ -1,0 +1,342 @@
+openapi: 3.0.3
+info:
+  title: IAM — Auth API
+  version: "0.2.0"
+  description: |
+    V1 authentication endpoints. Username+password login issues a short-lived
+    JWT access token (15 min, HS256) and a long-lived opaque refresh token
+    (7 days, HttpOnly cookie). The refresh endpoint rotates the opaque token
+    and issues a new JWT. All other endpoints require `Authorization: Bearer
+    <jwt>`.
+
+servers:
+  - url: https://tennetctl.example.com
+    description: Production
+  - url: http://localhost:8000
+    description: Local dev
+
+tags:
+  - name: auth
+    description: Login, logout, token refresh, current user
+
+paths:
+
+  /v1/auth/login:
+    post:
+      tags: [auth]
+      summary: Log in with username and password
+      description: |
+        Verifies credentials with Argon2id. On success issues:
+        - A signed JWT access token (HS256, 15 min TTL) in the response body.
+        - An opaque refresh token (7 day TTL) as an HttpOnly cookie named
+          `tcc_refresh`.
+
+        The access token must be stored in memory on the client — not in
+        `localStorage` or `sessionStorage`. Pass it as `Authorization:
+        Bearer <token>` on every subsequent request.
+
+        Identical error shape and latency for wrong password and unknown
+        username (no username enumeration).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: |
+                Refresh token cookie. In production:
+                `tcc_refresh=<opaque>; HttpOnly; Secure; SameSite=Strict;
+                Path=/v1/auth; Max-Age=604800`.
+                In dev the `Secure` flag is dropped.
+              schema:
+                type: string
+                example: >-
+                  tcc_refresh=<opaque>; HttpOnly; Secure; SameSite=Strict;
+                  Path=/v1/auth; Max-Age=604800
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                ok: false
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: Invalid username or password
+
+  /v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate refresh token and issue a new access token
+      description: |
+        Reads the `tcc_refresh` HttpOnly cookie. Verifies it against the
+        stored Argon2id hash. On success:
+        - Issues a new JWT access token (15 min TTL) in the response body.
+        - Rotates the refresh token (new opaque value, new cookie).
+
+        The old refresh token is invalidated atomically. Any replay of the
+        old token returns 401.
+
+        Call this endpoint when the access token has expired (the client
+        receives 401 `TOKEN_EXPIRED` from any other endpoint).
+      security: []   # auth via tcc_refresh cookie, not Bearer token
+      responses:
+        "200":
+          description: Tokens rotated successfully
+          headers:
+            Set-Cookie:
+              description: New refresh token cookie replacing the previous one.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResponse"
+        "401":
+          description: Refresh token missing, invalid, or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                missing:
+                  value:
+                    ok: false
+                    error: { code: REFRESH_TOKEN_REQUIRED, message: Refresh token required }
+                invalid:
+                  value:
+                    ok: false
+                    error: { code: INVALID_REFRESH_TOKEN, message: Invalid refresh token }
+                expired:
+                  value:
+                    ok: false
+                    error: { code: REFRESH_TOKEN_EXPIRED, message: Refresh token expired }
+                session_expired:
+                  value:
+                    ok: false
+                    error: { code: SESSION_EXPIRED, message: "Session expired, please log in again" }
+
+  /v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Revoke the current session
+      description: |
+        Soft-deletes the session row (`status = revoked`, `deleted_at =
+        now()`) and clears the `tcc_refresh` cookie. In-flight access
+        tokens expire within 15 minutes naturally; the session is
+        immediately unusable for token refresh.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Session revoked
+          headers:
+            Set-Cookie:
+              description: Refresh cookie cleared
+              schema:
+                type: string
+                example: tcc_refresh=; Max-Age=0; Path=/v1/auth
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/auth/me:
+    get:
+      tags: [auth]
+      summary: Get the current user and session
+      description: |
+        Returns the user profile and session metadata for the JWT attached
+        to the request. The JWT middleware rejects the request before the
+        handler runs if the token is missing, invalid, or the session has
+        been revoked.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user and session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT access token issued by `POST /v1/auth/login` or
+        `POST /v1/auth/refresh`. HS256-signed. Claims: sub (user_id),
+        sid (session_id), jti, iat, nbf, exp (iat + 900 seconds).
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+
+    # -- Requests -------------------------------------------------------------
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 64
+          example: admin
+        password:
+          type: string
+          format: password
+          minLength: 1
+          maxLength: 1024
+
+    # -- Response envelopes ---------------------------------------------------
+
+    ResponseEnvelopeOk:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        data:
+          type: object
+
+    ResponseEnvelopeError:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          enum: [false]
+        error:
+          $ref: "#/components/schemas/ErrorBody"
+
+    ErrorBody:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - INVALID_CREDENTIALS
+            - TOKEN_REQUIRED
+            - INVALID_TOKEN
+            - TOKEN_EXPIRED
+            - SESSION_REVOKED
+            - REFRESH_TOKEN_REQUIRED
+            - INVALID_REFRESH_TOKEN
+            - REFRESH_TOKEN_EXPIRED
+            - SESSION_EXPIRED
+        message:
+          type: string
+
+    ErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ResponseEnvelopeError"
+
+    # -- Domain ---------------------------------------------------------------
+
+    UserSummary:
+      type: object
+      required: [id, username, email, account_type]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        account_type:
+          type: string
+          enum: [default_admin, default_user]
+
+    SessionSummary:
+      type: object
+      required: [id, refresh_expires_at, absolute_expires_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        refresh_expires_at:
+          type: string
+          format: date-time
+          description: Hard expiry for the refresh token (7d from login).
+        absolute_expires_at:
+          type: string
+          format: date-time
+          description: Hard session cap (30d from login). Re-login required after this.
+
+    # -- Responses ------------------------------------------------------------
+
+    LoginResponse:
+      allOf:
+        - $ref: "#/components/schemas/ResponseEnvelopeOk"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [access_token, token_type, user]
+              properties:
+                access_token:
+                  type: string
+                  description: Signed JWT. Store in memory only — not localStorage.
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                token_type:
+                  type: string
+                  enum: [bearer]
+                user:
+                  $ref: "#/components/schemas/UserSummary"
+
+    RefreshResponse:
+      allOf:
+        - $ref: "#/components/schemas/ResponseEnvelopeOk"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [access_token, token_type]
+              properties:
+                access_token:
+                  type: string
+                  description: New signed JWT replacing the previous one.
+                token_type:
+                  type: string
+                  enum: [bearer]
+
+    MeResponse:
+      allOf:
+        - $ref: "#/components/schemas/ResponseEnvelopeOk"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [user, session]
+              properties:
+                user:
+                  $ref: "#/components/schemas/UserSummary"
+                session:
+                  $ref: "#/components/schemas/SessionSummary"
