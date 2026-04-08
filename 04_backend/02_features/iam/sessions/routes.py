@@ -1,9 +1,10 @@
-"""IAM session routes — login, me, refresh, logout.
+"""IAM session routes — login, me, refresh, switch_scope, logout.
 
-POST   /v1/sessions       — login (creates session, returns token pair)
-GET    /v1/sessions/me    — current user from Bearer token
-PATCH  /v1/sessions/{id}  — refresh token rotation
-DELETE /v1/sessions/{id}  — logout (soft-delete / revoke)
+POST   /v1/sessions              — login (creates session, returns token pair)
+GET    /v1/sessions/me           — current user from Bearer token
+PATCH  /v1/sessions/{id}         — refresh token rotation
+PATCH  /v1/sessions/{id}/scope   — switch active org/workspace scope
+DELETE /v1/sessions/{id}         — logout (soft-delete / revoke)
 """
 
 from __future__ import annotations
@@ -69,6 +70,30 @@ async def refresh(session_id: str, body: _schemas.RefreshRequest) -> dict:  # ty
             refresh_token=body.refresh_token,
         )
     return _resp.ok(result)
+
+
+@router.patch("/{session_id}/scope")
+async def switch_scope(
+    session_id: str,
+    body: _schemas.SwitchScopeRequest,  # type: ignore[name-defined]
+    token: dict = Depends(_auth.require_auth),
+) -> dict:
+    """Switch the active org/workspace scope for the session."""
+    user_id: str = token["sub"]
+    token_session_id: str = token.get("sid", "")
+    if token_session_id != session_id:
+        raise AppError("FORBIDDEN", "Cannot switch scope of another user's session.", 403)
+    pool = _db.get_pool()
+    async with pool.acquire() as conn:
+        await _service.switch_scope(
+            conn,
+            session_id,
+            body.target_org_id,
+            body.target_workspace_id,
+            user_id=user_id,
+            session_id_audit=session_id,
+        )
+    return _resp.ok({"session_id": session_id, "org_id": body.target_org_id, "workspace_id": body.target_workspace_id})
 
 
 @router.delete("/{session_id}", status_code=204)

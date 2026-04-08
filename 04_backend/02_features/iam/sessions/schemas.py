@@ -54,6 +54,11 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class SwitchScopeRequest(BaseModel):
+    target_org_id: str
+    target_workspace_id: str
+
+
 class LogoutResponse(BaseModel):
     ok: bool = True
     data: dict = {"message": "Session revoked."}

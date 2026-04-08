@@ -50,9 +50,12 @@ async def list_orgs(
         """,
         *params,
     )
+    # COUNT query is independent of LIMIT/OFFSET — use filter-only params re-numbered from $1
+    filter_params = params[2:]
+    count_where = f"WHERE is_active = $1" if filter_params else ""
     total = await conn.fetchval(  # type: ignore[union-attr]
-        f'SELECT COUNT(*) FROM "03_iam".v_orgs {where}',
-        *(params[2:]),
+        f'SELECT COUNT(*) FROM "03_iam".v_orgs {count_where}',
+        *filter_params,
     )
     return [dict(r) for r in rows], int(total)
 
@@ -178,21 +181,3 @@ async def update_org(
                 attrs[attr_code],
                 value,
             )
-
-
-async def delete_org(conn: object, org_id: str, *, actor_id: str) -> None:
-    """Soft-delete org (is_active=False, not a hard delete — orgs have no deleted_at)."""
-    archived_id = await _status_id_by_code(conn, "archived")
-    await conn.execute(  # type: ignore[union-attr]
-        """
-        UPDATE "03_iam"."10_fct_orgs"
-           SET is_active  = FALSE,
-               status_id  = $2,
-               updated_by = $3,
-               updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1
-        """,
-        org_id,
-        archived_id,
-        actor_id,
-    )

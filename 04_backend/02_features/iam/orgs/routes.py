@@ -4,7 +4,6 @@ GET    /v1/orgs          — list orgs
 POST   /v1/orgs          — create org
 GET    /v1/orgs/{id}     — get org
 PATCH  /v1/orgs/{id}     — update org
-DELETE /v1/orgs/{id}     — soft-delete org (archive)
 """
 
 from __future__ import annotations
@@ -93,21 +92,3 @@ async def update_org(
         )
     return _resp.ok(org)
 
-
-@router.delete("/{org_id}", status_code=204)
-async def delete_org(
-    org_id: str,
-    token: dict = Depends(_auth.require_auth),
-) -> None:
-    actor_id: str = token["sub"]
-    session_id: str = token.get("sid", "")
-    pool = _db.get_pool()
-    async with pool.acquire() as conn:
-        await _service.delete_org(
-            conn,
-            org_id,
-            actor_id=actor_id,
-            session_id=session_id,
-            org_id_audit=token.get("oid"),
-            workspace_id_audit=token.get("wid"),
-        )

@@ -44,6 +44,9 @@ async def create_workspace(
     org_id_audit: str | None = None,
     workspace_id_audit: str | None = None,
 ) -> dict:
+    if await _repo.slug_exists_in_org(conn, org_id, slug):
+        raise AppError("WORKSPACE_SLUG_CONFLICT", f"Slug '{slug}' already exists in this org.", 409)
+
     workspace_id = _id_mod.uuid7()
 
     async with conn.transaction():  # type: ignore[union-attr]
@@ -86,6 +89,10 @@ async def update_workspace(
     existing = await _repo.get_workspace(conn, workspace_id)
     if existing is None:
         raise AppError("WORKSPACE_NOT_FOUND", f"Workspace '{workspace_id}' not found.", 404)
+
+    if slug is not None and slug != existing.get("slug"):
+        if await _repo.slug_exists_in_org(conn, existing["org_id"], slug, exclude_id=workspace_id):
+            raise AppError("WORKSPACE_SLUG_CONFLICT", f"Slug '{slug}' already exists in this org.", 409)
 
     async with conn.transaction():  # type: ignore[union-attr]
         await _repo.update_workspace(

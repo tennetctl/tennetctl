@@ -111,32 +111,3 @@ async def update_org(
         )
 
     return await _repo.get_org(conn, org_id)
-
-
-async def delete_org(
-    conn: object,
-    org_id: str,
-    *,
-    actor_id: str,
-    session_id: str | None = None,
-    org_id_audit: str | None = None,
-    workspace_id_audit: str | None = None,
-) -> None:
-    existing = await _repo.get_org(conn, org_id)
-    if existing is None:
-        raise AppError("ORG_NOT_FOUND", f"Org '{org_id}' not found.", 404)
-
-    async with conn.transaction():  # type: ignore[union-attr]
-        await _repo.delete_org(conn, org_id, actor_id=actor_id)
-        await _audit.emit(
-            conn,
-            category="iam",
-            action="org.delete",
-            outcome="success",
-            user_id=actor_id,
-            session_id=session_id,
-            org_id=org_id_audit,
-            workspace_id=workspace_id_audit,
-            target_id=org_id,
-            target_type="iam_org",
-        )

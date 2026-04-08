@@ -57,11 +57,45 @@ async def list_workspaces(
         """,
         *params,
     )
+    # COUNT query is independent of LIMIT/OFFSET — re-number filter params from $1
+    filter_params = params[2:]
+    count_conditions = []
+    if org_id is not None:
+        count_conditions.append(f"org_id = ${len(count_conditions) + 1}")
+    if is_active is not None:
+        count_conditions.append(f"is_active = ${len(count_conditions) + 1}")
+    count_where = ("WHERE " + " AND ".join(count_conditions)) if count_conditions else ""
     total = await conn.fetchval(  # type: ignore[union-attr]
-        f'SELECT COUNT(*) FROM "03_iam".v_workspaces {where}',
-        *(params[2:]),
+        f'SELECT COUNT(*) FROM "03_iam".v_workspaces {count_where}',
+        *filter_params,
     )
     return [dict(r) for r in rows], int(total)
+
+
+async def slug_exists_in_org(conn: object, org_id: str, slug: str, *, exclude_id: str | None = None) -> bool:
+    """Return True if a workspace with this slug already exists in the org."""
+    row = await conn.fetchrow(  # type: ignore[union-attr]
+        """
+        SELECT w.id
+          FROM "03_iam"."10_fct_workspaces" w
+          JOIN "03_iam"."20_dtl_attrs" s
+                 ON s.entity_id   = w.id
+                AND s.attr_def_id = (
+                    SELECT d.id
+                      FROM "03_iam"."07_dim_attr_defs" d
+                      JOIN "03_iam"."06_dim_entity_types" et ON d.entity_type_id = et.id
+                     WHERE et.code = 'iam_workspace' AND d.code = 'slug'
+                )
+         WHERE w.org_id = $1
+           AND s.key_text = $2
+           AND w.is_active = TRUE
+           AND ($3::varchar IS NULL OR w.id != $3)
+        """,
+        org_id,
+        slug,
+        exclude_id,
+    )
+    return row is not None
 
 
 async def get_workspace(conn: object, workspace_id: str) -> dict | None:
