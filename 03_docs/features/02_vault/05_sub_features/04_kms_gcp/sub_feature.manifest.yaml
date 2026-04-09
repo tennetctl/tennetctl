@@ -1,0 +1,12 @@
+title: "T-Vault — GCP Cloud KMS Auto-Unseal"
+sub_feature: "04_kms_gcp"
+feature: "02_vault"
+status: PLANNED
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  GCP Cloud KMS auto-unseal backend. Wraps the MDK with a KMS key at install
+  time; pods call decrypt on every boot using Workload Identity (GKE).
+  Implements the UnsealBackend protocol defined in 01_setup. No schema changes.
+
+  PLANNED — not built in v1. Will be built when tennetctl is deployed on GKE.

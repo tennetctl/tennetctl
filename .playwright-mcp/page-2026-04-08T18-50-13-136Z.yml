@@ -1,0 +1,108 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "T tennetctl S-Control" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: T
+        - generic [ref=e8]: tennetctl
+        - generic [ref=e9]: S-Control
+      - navigation "Modules" [ref=e11]:
+        - link "IAM 03" [ref=e12] [cursor=pointer]:
+          - /url: /iam
+          - img [ref=e13]
+          - generic [ref=e16]: IAM
+          - generic [ref=e17]: "03"
+        - link "Vault 02" [ref=e18] [cursor=pointer]:
+          - /url: /vault
+          - img [ref=e19]
+          - generic [ref=e21]: Vault
+          - generic [ref=e22]: "02"
+        - link "Audit 04" [ref=e23] [cursor=pointer]:
+          - /url: /audit
+          - img [ref=e24]
+          - generic [ref=e29]: Audit
+          - generic [ref=e30]: "04"
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - generic [ref=e33]: Search
+          - generic [ref=e34]: ⌘
+          - generic [ref=e35]: K
+        - button "Toggle theme" [ref=e36]:
+          - img [ref=e37]
+        - button "admin" [ref=e39]:
+          - img [ref=e41]
+          - generic [ref=e44]: admin
+          - img [ref=e45]
+  - main [ref=e48]:
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - navigation "Breadcrumb" [ref=e51]:
+          - generic [ref=e52]: tennetctl
+          - generic [ref=e53]: /
+          - generic [ref=e54]: Overview
+        - heading "Operator Console" [level=1] [ref=e55]
+        - paragraph [ref=e56]: Super-admin view across IAM, Vault, and Audit.
+      - generic [ref=e58]:
+        - img [ref=e59]
+        - text: Operational
+    - generic [ref=e61]:
+      - generic [ref=e62]:
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: Active sessions
+          - paragraph [ref=e65]: —
+          - paragraph [ref=e66]: across all orgs
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: Users
+          - paragraph [ref=e69]: —
+          - paragraph [ref=e70]: total registered
+        - generic [ref=e71]:
+          - paragraph [ref=e72]: Audit events (24h)
+          - paragraph [ref=e73]: —
+          - paragraph [ref=e74]: success + failure
+        - generic [ref=e75]:
+          - paragraph [ref=e76]: Vault status
+          - paragraph [ref=e77]: —
+          - paragraph [ref=e78]: seal state
+      - generic [ref=e79]:
+        - heading "Modules" [level=2] [ref=e80]
+        - generic [ref=e81]:
+          - link "03 IAM Identity, users & access Overview Users Organizations Sessions" [ref=e82] [cursor=pointer]:
+            - /url: /iam
+            - generic [ref=e83]:
+              - generic [ref=e84]:
+                - img [ref=e86]
+                - generic [ref=e89]: "03"
+              - generic [ref=e90]:
+                - heading "IAM" [level=3] [ref=e91]
+                - img [ref=e92]
+              - paragraph [ref=e94]: Identity, users & access
+              - generic [ref=e95]:
+                - generic [ref=e96]: Overview
+                - generic [ref=e97]: Users
+                - generic [ref=e98]: Organizations
+                - generic [ref=e99]: Sessions
+          - link "02 Vault Secrets & KMS Status Seal Unseal" [ref=e100] [cursor=pointer]:
+            - /url: /vault
+            - generic [ref=e101]:
+              - generic [ref=e102]:
+                - img [ref=e104]
+                - generic [ref=e106]: "02"
+              - generic [ref=e107]:
+                - heading "Vault" [level=3] [ref=e108]
+                - img [ref=e109]
+              - paragraph [ref=e111]: Secrets & KMS
+              - generic [ref=e112]:
+                - generic [ref=e113]: Status
+                - generic [ref=e114]: Seal
+                - generic [ref=e115]: Unseal
+          - link "04 Audit Append-only event log Events" [ref=e116] [cursor=pointer]:
+            - /url: /audit
+            - generic [ref=e117]:
+              - generic [ref=e118]:
+                - img [ref=e120]
+                - generic [ref=e125]: "04"
+              - generic [ref=e126]:
+                - heading "Audit" [level=3] [ref=e127]
+                - img [ref=e128]
+              - paragraph [ref=e130]: Append-only event log
+              - generic [ref=e132]: Events

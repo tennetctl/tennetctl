@@ -1,0 +1,8 @@
+feature: "04_audit"
+sub_feature: "00_bootstrap"
+migrations:
+  - file: "20260408_005_audit_bootstrap.sql"
+    sequence: 5
+    description: "Create 04_audit schema, event categories dim table, evt_events append-only log, grants"
+    depends_on: [3]
+    reversible: true

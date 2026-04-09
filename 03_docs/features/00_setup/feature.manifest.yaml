@@ -1,0 +1,40 @@
+title: "Setup — First-Run Install Workflow"
+feature: "00_setup"
+db_schema: "00_schema_migrations"
+status: ACTIVE
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  First-run installer for tennetctl. One interactive CLI command
+  (`tennetctl setup`) walks the operator through DB access capture, schema
+  bootstrap, vault init, first admin user creation, and runtime settings
+  seeding. Idempotent and resumable. The wizard writes no files to disk:
+  all install state lives in Postgres. At runtime the app finds the DB via
+  `$DATABASE_URL` and loads everything else from `10_fct_settings`. Owns
+  the `10_fct_settings` table; updates `system_meta`; inserts the first
+  row in `03_iam.10_fct_users`.
+
+sub_features:
+  - number: 0
+    name: wizard
+    status: BUILDING
+    description: "Interactive CLI shell, prompt loop, resume-from-phase logic, settings seeder orchestrator. No filesystem writes."
+  - number: 1
+    name: db_bootstrap
+    status: BUILDING
+    description: "Mode A (superuser) or Mode B (pre-provisioned) DB credential capture, role creation, privilege verification, and migration runner invocation."
+  - number: 2
+    name: vault_init
+    status: BUILDING
+    description: "Unseal mode selection, vault init via the chosen UnsealBackend, seeding the three DB DSNs and the IAM JWT signing key into the vault."
+  - number: 3
+    name: first_admin
+    status: BUILDING
+    description: "First admin username+password capture, Argon2id hashing, insertion into 03_iam.10_fct_users, system_meta.installed_at write."
+  - number: 4
+    name: settings
+    status: BUILDING
+    description: "Seeds the 10_fct_settings table with v1 defaults (global.env plus the IAM runtime config rows). Idempotent via ON CONFLICT DO NOTHING."
+
+migrations: []
+frontend_pages: []

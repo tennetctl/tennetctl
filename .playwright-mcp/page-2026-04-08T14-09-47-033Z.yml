@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - heading "Sign in" [level=1] [ref=e4]
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Username
+          - textbox "Username" [ref=e8]:
+            - /placeholder: admin
+            - text: admin
+        - generic [ref=e9]:
+          - generic [ref=e10]: Password
+          - textbox "Password" [ref=e11]:
+            - /placeholder: ••••••••
+            - text: ChangeMe123!
+        - paragraph [ref=e27]: "Logged in as admin. Session: 019d6d6d…"
+        - button "Sign in" [ref=e12]
+      - generic [ref=e13]:
+        - link "← Home" [ref=e14] [cursor=pointer]:
+          - /url: /
+        - link "Vault status →" [ref=e15] [cursor=pointer]:
+          - /url: /vault
+  - status [ref=e17]:
+    - generic [ref=e18]:
+      - img [ref=e20]
+      - generic [ref=e22]:
+        - text: Static route
+        - button "Hide static indicator" [ref=e23] [cursor=pointer]:
+          - img [ref=e24]
+  - alert [ref=e16]

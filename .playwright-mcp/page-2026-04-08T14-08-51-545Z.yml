@@ -1,0 +1,19 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - heading "tennetctl" [level=1] [ref=e4]
+      - paragraph [ref=e5]: S-Control platform
+    - navigation [ref=e6]:
+      - link "IAM — Sign in →" [ref=e7] [cursor=pointer]:
+        - /url: /iam
+        - generic [ref=e8]: IAM — Sign in
+        - generic [ref=e9]: →
+      - link "Vault — Status →" [ref=e10] [cursor=pointer]:
+        - /url: /vault
+        - generic [ref=e11]: Vault — Status
+        - generic [ref=e12]: →
+      - link "Backend — healthz →" [ref=e13] [cursor=pointer]:
+        - /url: http://localhost:8000/healthz
+        - generic [ref=e14]: Backend — healthz
+        - generic [ref=e15]: →
+  - alert [ref=e16]

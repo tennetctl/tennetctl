@@ -1,0 +1,54 @@
+title: "T-Vault — Encrypted Secrets Management"
+feature: "02_vault"
+db_schema: "02_vault"
+status: ACTIVE
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  T-Vault is tennetctl's built-in secrets manager. Secrets, environment variables,
+  and configs live in Postgres — encrypted at rest. No .env files. No external
+  secret manager required. The vault supports pluggable unseal backends: manual
+  (operator provides Root Unseal Key on every boot) for local dev and single-VM
+  deployments, and cloud KMS backends (Azure Key Vault, AWS KMS, GCP KMS) for
+  K8s-native auto-unseal via workload identity.
+
+sub_features:
+  - number: 0
+    name: bootstrap
+    status: BUILDING
+    description: "Schema creation — 02_vault schema and shared dim/dtl tables."
+  - number: 1
+    name: setup
+    status: BUILDING
+    description: "Vault singleton, init/unseal/seal lifecycle, and the pluggable UnsealBackend interface. Ships the ManualUnsealBackend implementation."
+  - number: 2
+    name: kms_azure
+    status: BUILDING
+    description: "Azure Key Vault auto-unseal backend. Workload Identity on AKS, DefaultAzureCredential elsewhere."
+  - number: 3
+    name: kms_aws
+    status: PLANNED
+    description: "AWS KMS auto-unseal backend via IRSA. Built when deployed on EKS."
+  - number: 4
+    name: kms_gcp
+    status: PLANNED
+    description: "GCP Cloud KMS auto-unseal backend via Workload Identity. Built when deployed on GKE."
+  - number: 5
+    name: project
+    status: PLANNED
+    description: "Vault projects — containers that group secrets by application or service."
+  - number: 6
+    name: environment
+    status: PLANNED
+    description: "Per-project environments (dev, staging, prod)."
+  - number: 7
+    name: secret
+    status: PLANNED
+    description: "Encrypted secrets — env vars, configs, and arbitrary key-value pairs."
+  - number: 8
+    name: api_key
+    status: PLANNED
+    description: "Scoped API keys for programmatic secret access (per project, per environment)."
+
+migrations: []
+frontend_pages: []

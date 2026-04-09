@@ -1,0 +1,8 @@
+feature: "03_iam"
+sub_feature: "04_group"
+migrations:
+  - file: "20260409_009_iam_groups.sql"
+    sequence: 9
+    description: "Create iam_group entity type, 10_fct_groups, 40_lnk_group_members, v_groups, v_group_members"
+    depends_on: [3, 6, 7, 8]
+    reversible: true

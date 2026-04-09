@@ -1,0 +1,8 @@
+feature: "03_iam"
+sub_feature: "03_orgs"
+migrations:
+  - file: "20260408_006_iam_orgs.sql"
+    sequence: 6
+    description: "Create 03_iam org status dim table, 10_fct_orgs, org slug index, and v_orgs view"
+    depends_on: [3, 5]
+    reversible: true

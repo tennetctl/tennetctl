@@ -1,0 +1,8 @@
+feature: "02_vault"
+sub_feature: "00_bootstrap"
+migrations:
+  - file: "20260408_001_vault_bootstrap.sql"
+    sequence: 1
+    description: "Bootstrap the 02_vault schema with shared EAV tables (dim_entity_types, dim_attr_defs, dtl_attrs)"
+    depends_on: [0]
+    reversible: true

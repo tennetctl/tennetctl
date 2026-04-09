@@ -1,0 +1,8 @@
+feature: "03_iam"
+sub_feature: "05_memberships"
+migrations:
+  - file: "20260408_008_iam_memberships.sql"
+    sequence: 8
+    description: "Create 03_iam lnk_user_orgs and lnk_user_workspaces tables, and v_user_orgs / v_user_workspaces views"
+    depends_on: [7]
+    reversible: true

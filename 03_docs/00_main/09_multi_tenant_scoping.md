@@ -266,6 +266,22 @@ The separate `fct_flag_projects` table is unnecessary. Projects are org-level en
 -- project_id now references fct_projects instead of fct_flag_projects
 ```
 
+## Product Axis
+
+Alongside org and workspace, tennetctl now has a **product** axis. The platform hosts multiple products (Vault, MapBuilder on Isis base, etc.), and scoping must account for which product a given entity belongs to.
+
+- Platform hosts multiple products (Vault, MapBuilder on Isis base, etc.).
+- Products are a platform-level catalog defined in `10_fct_products`.
+- Workspaces subscribe to products via `40_lnk_workspace_products` (many-to-many) — a workspace may have access to zero or more products.
+- Feature flags carry `product_id` so they can be filtered and evaluated per product.
+- The feature registry (`10_fct_features`) roots every feature under a product, giving a queryable tree of product → feature → sub-feature.
+
+See the planning docs under `03_docs/features/03_iam/06_planned/`:
+
+- [27_products_catalog.md](../features/03_iam/06_planned/27_products_catalog.md) — product catalog + workspace subscriptions
+- [28_feature_registry.md](../features/03_iam/06_planned/28_feature_registry.md) — queryable feature registry
+- [29_categories_and_scopes.md](../features/03_iam/06_planned/29_categories_and_scopes.md) — shared scope/category enums
+
 ## Key Principles
 
 1. **One row, many viewers.** Platform entities exist once. Orgs see them via inheritance, never duplication.

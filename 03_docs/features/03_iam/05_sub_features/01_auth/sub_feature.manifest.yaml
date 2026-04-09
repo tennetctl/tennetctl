@@ -1,0 +1,12 @@
+title: "IAM — Auth (Login / Logout / Me)"
+sub_feature: "01_auth"
+feature: "03_iam"
+status: BUILDING
+owner: "srigaddeks"
+created_at: "2026-04-08"
+description: |
+  The only v1 auth sub-feature. Implements POST /v1/auth/login,
+  POST /v1/auth/logout, GET /v1/auth/me, the opaque session token model,
+  the session cookie middleware, and Argon2id password verification.
+  Uses the schema created by 00_bootstrap. Shares backend/01_core/password.py
+  with 00_setup/03_first_admin so install-time hashes verify at runtime.

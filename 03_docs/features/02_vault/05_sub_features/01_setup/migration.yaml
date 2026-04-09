@@ -1,0 +1,13 @@
+feature: "02_vault"
+sub_feature: "01_setup"
+migrations:
+  - file: "20260408_002_vault_setup.sql"
+    sequence: 2
+    description: "Vault singleton table (fct_vault), status dim, and v_vault view"
+    depends_on: [1]
+    reversible: true
+  - file: "20260408_004_vault_secrets_fct.sql"
+    sequence: 4
+    description: "Envelope-encrypted secret storage (10_fct_secrets, v_secrets)"
+    depends_on: [2]
+    reversible: true
